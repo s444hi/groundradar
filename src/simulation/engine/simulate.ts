@@ -25,30 +25,29 @@ export interface SimulateInput {
   years?: number; // default 3, per engine rule 3
 }
 
-// Season fit always counts at full weight (engine rule 8); using the top of
-// the 0-10 priority scale keeps it comparable to the priority-weighted terms.
-const SEASON_FIT_WEIGHT = 10;
-
 function average(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 // Priority weighting (engine rule 8): water -> water; soil_health ->
-// nitrogen + erosion; pests -> pests; income -> income.
+// nitrogen + erosion; pests -> pests; income -> income. Season fit is a
+// multiplier, not part of the weighted average: a crop that dies in frost
+// (season_fit_score near 0) tanks the whole season's score regardless of how
+// well it otherwise did, rather than being diluted into one more averaged
+// term that a perfect fit would inflate equally for every season.
 function weightedOverall(season: SeasonResult, priorities: Priorities): number {
   const { subscores } = season;
   const soilHealthComponent = (subscores.nitrogen_score + subscores.erosion_protection_score) / 2;
 
   const numerator =
-    subscores.season_fit_score * SEASON_FIT_WEIGHT +
     subscores.water_efficiency_score * priorities.water +
     soilHealthComponent * priorities.soil_health +
     subscores.pest_break_score * priorities.pests +
     subscores.income_score * priorities.income;
-  const denominator =
-    SEASON_FIT_WEIGHT + priorities.water + priorities.soil_health + priorities.pests + priorities.income;
+  const denominator = priorities.water + priorities.soil_health + priorities.pests + priorities.income;
+  const weightedAverage = denominator > 0 ? numerator / denominator : 100;
 
-  return numerator / denominator;
+  return weightedAverage * (subscores.season_fit_score / 100);
 }
 
 /**

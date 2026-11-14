@@ -7,10 +7,19 @@ import type {
   FrostDates,
   PastRotationSlot,
   Priorities,
+  QualitativeAnalysis,
   RotationStrategy,
   SoilProfile,
   WeeklyClimatologyEntry,
 } from "../types";
+
+const emptyQualitativeAnalysis: QualitativeAnalysis = {
+  why_suggested: "",
+  nasa_evidence: "",
+  benefits: [],
+  information_gaps: [],
+  local_risks_for_review: [],
+};
 
 const crops = cropsJson.crops as unknown as CropsById;
 const soil = demoField.field_profile.soil as unknown as SoilProfile;
@@ -75,5 +84,51 @@ describe("simulateStrategy", () => {
     const soilBuilder = simulate(soilBuilderStrategy);
 
     expect(soilBuilder.income_score).toBe(baseline.income_score);
+  });
+
+  it("multiplies by season fit instead of averaging it in, so a frost-killed crop tanks the score", () => {
+    // tomato is not frost tolerant; forcing it into the cool season (an
+    // agronomically wrong but deterministic scenario) triggers the
+    // season_fit penalty and isolates the multiplier's effect.
+    const frostRiskStrategy: RotationStrategy = {
+      strategy_id: "frost_risk_test",
+      title: "Frost risk test",
+      is_baseline: true,
+      timeline: [
+        { year: 2026, season: "cool_season", crops: ["tomato"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+      ],
+      simulation_scores: null,
+      qualitative_analysis: emptyQualitativeAnalysis,
+    };
+
+    const result = simulateStrategy({
+      strategy: frostRiskStrategy,
+      crops,
+      soil,
+      pastRotation,
+      frostDates,
+      weeklyClimatology,
+      slopePercent,
+      priorities,
+      years: 1,
+    });
+    const season = result.seasons![0];
+    expect(season.subscores.season_fit_score).toBeLessThan(100);
+
+    // The weighted average of the other components, with no fit multiplier.
+    const denominator = priorities.water + priorities.soil_health + priorities.pests + priorities.income;
+    const soilHealthComponent = (season.subscores.nitrogen_score + season.subscores.erosion_protection_score) / 2;
+    const othersWeightedAverage =
+      (season.subscores.water_efficiency_score * priorities.water +
+        soilHealthComponent * priorities.soil_health +
+        season.subscores.pest_break_score * priorities.pests +
+        season.subscores.income_score * priorities.income) /
+      denominator;
+
+    expect(result.overall_success_score).toBeCloseTo(
+      othersWeightedAverage * (season.subscores.season_fit_score / 100),
+      5,
+    );
+    expect(result.overall_success_score!).toBeLessThan(othersWeightedAverage);
   });
 });
