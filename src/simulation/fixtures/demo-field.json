@@ -1,0 +1,278 @@
+{
+  "_note": "climate_data.weekly_climatology weeks 3-52 are mock data.",
+  "field_profile": {
+    "field_id": "uuid-1234",
+    "mode": "farm",
+    "location": {
+      "latitude": 38.678,
+      "longitude": -121.176
+    },
+    "area_acres": 4.2,
+    "elevation_m": 68,
+    "slope_percent": 3.4,
+    "soil": {
+      "source": "soilgrids_plus_photo_analysis",
+      "texture_class": "loam",
+      "sand_percent": 42,
+      "silt_percent": 38,
+      "clay_percent": 20,
+      "organic_carbon_g_kg": 18.5,
+      "organic_matter_level": "low",
+      "drainage_runoff_risk": "medium",
+      "nitrogen_level": "low",
+      "pest_carryover_risk": "medium",
+      "pest_carryover_family": "solanaceae"
+    }
+  },
+  "survey_inputs": {
+    "past_rotation": [
+      { "year": 2025, "season": "warm_season", "crops": ["tomato"] },
+      { "year": 2025, "season": "cool_season", "crops": ["fallow"] }
+    ],
+    "planned_rotation": [
+      { "year": 2026, "season": "warm_season", "crops": ["bell_pepper"] }
+    ],
+    "priorities": {
+      "water": 9,
+      "income": 7,
+      "soil_health": 8,
+      "pests": 6
+    }
+  },
+  "climate_data": {
+    "frost_dates": {
+      "last_spring_frost": "03-18",
+      "first_fall_frost": "11-12",
+      "frost_free_days": 239
+    },
+    "weekly_climatology_length": 52,
+    "weekly_climatology": [
+      { "week": 1, "temp_low_c": 3.2, "temp_high_c": 12.8, "rainfall_mm": 24.5, "soil_moisture_m3_m3": 0.31 },
+      { "week": 2, "temp_low_c": 3.8, "temp_high_c": 13.4, "rainfall_mm": 22.1, "soil_moisture_m3_m3": 0.32 },
+      { "week": 3, "temp_low_c": 3.4, "temp_high_c": 12.7, "rainfall_mm": 22.7, "soil_moisture_m3_m3": 0.34 },
+      { "week": 4, "temp_low_c": 3.6, "temp_high_c": 13.3, "rainfall_mm": 20.1, "soil_moisture_m3_m3": 0.33 },
+      { "week": 5, "temp_low_c": 3.7, "temp_high_c": 13.9, "rainfall_mm": 18.1, "soil_moisture_m3_m3": 0.32 },
+      { "week": 6, "temp_low_c": 3.8, "temp_high_c": 14.6, "rainfall_mm": 17.3, "soil_moisture_m3_m3": 0.31 },
+      { "week": 7, "temp_low_c": 3.9, "temp_high_c": 15.3, "rainfall_mm": 17.4, "soil_moisture_m3_m3": 0.3 },
+      { "week": 8, "temp_low_c": 4.2, "temp_high_c": 16.0, "rainfall_mm": 17.9, "soil_moisture_m3_m3": 0.29 },
+      { "week": 9, "temp_low_c": 4.5, "temp_high_c": 16.7, "rainfall_mm": 17.6, "soil_moisture_m3_m3": 0.29 },
+      { "week": 10, "temp_low_c": 4.9, "temp_high_c": 17.5, "rainfall_mm": 16.3, "soil_moisture_m3_m3": 0.29 },
+      { "week": 11, "temp_low_c": 5.3, "temp_high_c": 18.2, "rainfall_mm": 14.6, "soil_moisture_m3_m3": 0.28 },
+      { "week": 12, "temp_low_c": 5.9, "temp_high_c": 19.1, "rainfall_mm": 12.3, "soil_moisture_m3_m3": 0.26 },
+      { "week": 13, "temp_low_c": 6.5, "temp_high_c": 19.9, "rainfall_mm": 10.8, "soil_moisture_m3_m3": 0.25 },
+      { "week": 14, "temp_low_c": 7.1, "temp_high_c": 20.6, "rainfall_mm": 9.8, "soil_moisture_m3_m3": 0.23 },
+      { "week": 15, "temp_low_c": 7.6, "temp_high_c": 21.3, "rainfall_mm": 8.4, "soil_moisture_m3_m3": 0.21 },
+      { "week": 16, "temp_low_c": 8.1, "temp_high_c": 22.0, "rainfall_mm": 7.1, "soil_moisture_m3_m3": 0.19 },
+      { "week": 17, "temp_low_c": 8.7, "temp_high_c": 22.8, "rainfall_mm": 5.8, "soil_moisture_m3_m3": 0.19 },
+      { "week": 18, "temp_low_c": 9.1, "temp_high_c": 23.6, "rainfall_mm": 4.5, "soil_moisture_m3_m3": 0.18 },
+      { "week": 19, "temp_low_c": 9.6, "temp_high_c": 24.5, "rainfall_mm": 3.4, "soil_moisture_m3_m3": 0.18 },
+      { "week": 20, "temp_low_c": 10.0, "temp_high_c": 25.6, "rainfall_mm": 2.7, "soil_moisture_m3_m3": 0.17 },
+      { "week": 21, "temp_low_c": 10.6, "temp_high_c": 26.8, "rainfall_mm": 2.5, "soil_moisture_m3_m3": 0.15 },
+      { "week": 22, "temp_low_c": 11.2, "temp_high_c": 28.1, "rainfall_mm": 2.2, "soil_moisture_m3_m3": 0.14 },
+      { "week": 23, "temp_low_c": 12.0, "temp_high_c": 29.4, "rainfall_mm": 1.8, "soil_moisture_m3_m3": 0.12 },
+      { "week": 24, "temp_low_c": 12.7, "temp_high_c": 30.6, "rainfall_mm": 1.2, "soil_moisture_m3_m3": 0.1 },
+      { "week": 25, "temp_low_c": 13.3, "temp_high_c": 31.5, "rainfall_mm": 1.0, "soil_moisture_m3_m3": 0.09 },
+      { "week": 26, "temp_low_c": 13.8, "temp_high_c": 32.3, "rainfall_mm": 0.9, "soil_moisture_m3_m3": 0.09 },
+      { "week": 27, "temp_low_c": 14.2, "temp_high_c": 33.0, "rainfall_mm": 0.8, "soil_moisture_m3_m3": 0.09 },
+      { "week": 28, "temp_low_c": 14.6, "temp_high_c": 33.7, "rainfall_mm": 0.7, "soil_moisture_m3_m3": 0.09 },
+      { "week": 29, "temp_low_c": 14.7, "temp_high_c": 33.8, "rainfall_mm": 0.7, "soil_moisture_m3_m3": 0.09 },
+      { "week": 30, "temp_low_c": 14.5, "temp_high_c": 33.4, "rainfall_mm": 0.7, "soil_moisture_m3_m3": 0.09 },
+      { "week": 31, "temp_low_c": 14.3, "temp_high_c": 33.1, "rainfall_mm": 0.7, "soil_moisture_m3_m3": 0.08 },
+      { "week": 32, "temp_low_c": 14.0, "temp_high_c": 32.9, "rainfall_mm": 0.7, "soil_moisture_m3_m3": 0.08 },
+      { "week": 33, "temp_low_c": 13.8, "temp_high_c": 32.7, "rainfall_mm": 0.7, "soil_moisture_m3_m3": 0.07 },
+      { "week": 34, "temp_low_c": 13.5, "temp_high_c": 32.4, "rainfall_mm": 0.9, "soil_moisture_m3_m3": 0.08 },
+      { "week": 35, "temp_low_c": 13.2, "temp_high_c": 32.1, "rainfall_mm": 1.3, "soil_moisture_m3_m3": 0.08 },
+      { "week": 36, "temp_low_c": 13.1, "temp_high_c": 31.8, "rainfall_mm": 1.6, "soil_moisture_m3_m3": 0.09 },
+      { "week": 37, "temp_low_c": 13.0, "temp_high_c": 31.4, "rainfall_mm": 1.9, "soil_moisture_m3_m3": 0.11 },
+      { "week": 38, "temp_low_c": 12.4, "temp_high_c": 30.3, "rainfall_mm": 2.6, "soil_moisture_m3_m3": 0.12 },
+      { "week": 39, "temp_low_c": 11.6, "temp_high_c": 28.8, "rainfall_mm": 3.3, "soil_moisture_m3_m3": 0.12 },
+      { "week": 40, "temp_low_c": 10.7, "temp_high_c": 27.3, "rainfall_mm": 4.0, "soil_moisture_m3_m3": 0.13 },
+      { "week": 41, "temp_low_c": 9.8, "temp_high_c": 25.8, "rainfall_mm": 4.9, "soil_moisture_m3_m3": 0.13 },
+      { "week": 42, "temp_low_c": 8.8, "temp_high_c": 24.1, "rainfall_mm": 6.5, "soil_moisture_m3_m3": 0.14 },
+      { "week": 43, "temp_low_c": 7.7, "temp_high_c": 22.2, "rainfall_mm": 8.8, "soil_moisture_m3_m3": 0.16 },
+      { "week": 44, "temp_low_c": 6.5, "temp_high_c": 20.3, "rainfall_mm": 10.7, "soil_moisture_m3_m3": 0.18 },
+      { "week": 45, "temp_low_c": 5.4, "temp_high_c": 18.5, "rainfall_mm": 11.9, "soil_moisture_m3_m3": 0.2 },
+      { "week": 46, "temp_low_c": 4.2, "temp_high_c": 16.8, "rainfall_mm": 12.8, "soil_moisture_m3_m3": 0.23 },
+      { "week": 47, "temp_low_c": 3.9, "temp_high_c": 15.8, "rainfall_mm": 13.7, "soil_moisture_m3_m3": 0.25 },
+      { "week": 48, "temp_low_c": 3.5, "temp_high_c": 14.8, "rainfall_mm": 15.4, "soil_moisture_m3_m3": 0.27 },
+      { "week": 49, "temp_low_c": 3.3, "temp_high_c": 13.7, "rainfall_mm": 18.0, "soil_moisture_m3_m3": 0.28 },
+      { "week": 50, "temp_low_c": 3.1, "temp_high_c": 12.6, "rainfall_mm": 20.7, "soil_moisture_m3_m3": 0.29 },
+      { "week": 51, "temp_low_c": 3.1, "temp_high_c": 12.4, "rainfall_mm": 21.7, "soil_moisture_m3_m3": 0.3 },
+      { "week": 52, "temp_low_c": 3.2, "temp_high_c": 12.4, "rainfall_mm": 21.3, "soil_moisture_m3_m3": 0.3 }
+    ],
+    "long_term_trends": {
+      "temp_trend_c_per_decade": 0.42,
+      "precip_trend_pct_per_decade": -4.5,
+      "grace_groundwater_cm_per_yr": -1.2
+    },
+    "nasa_diagnostics_summary": {
+      "smap_soil_moisture_status": "Below average in late summer",
+      "gpm_rainfall_pattern": "Concentrated winter rain, 68% drier summers",
+      "ecostress_evap_stress": "High heat-driven water loss in July-August",
+      "heat_stress_days_above_35c": 24,
+      "erosion_vulnerability": "high",
+      "typical_bare_soil_months": [10, 11, 12, 1],
+      "peak_vegetation_stress_months": [7, 8]
+    }
+  },
+  "rotation_strategies": [
+    {
+      "strategy_id": "existing_baseline",
+      "title": "Strategy 1: Current / Baseline Rotation",
+      "is_baseline": true,
+      "timeline": [
+        {
+          "year": 2026,
+          "season": "warm_season",
+          "crops": ["bell_pepper"],
+          "alternate_crop_ids": [],
+          "is_mix": false,
+          "purpose": "Primary cash crop yield"
+        },
+        {
+          "year": 2026,
+          "season": "cool_season",
+          "crops": ["fallow"],
+          "alternate_crop_ids": [],
+          "is_mix": false,
+          "purpose": "Unplanted overwinter period"
+        }
+      ],
+      "simulation_scores": {
+        "computed_by": "simulation_engine",
+        "overall_success_score": null,
+        "water_efficiency_score": null,
+        "erosion_protection_score": null,
+        "pest_break_score": null,
+        "season_fit_score": null,
+        "income_score": null,
+        "soil_health_delta": null,
+        "estimated_irrigation_mm": null,
+        "nitrogen_balance_kg_ha": null,
+        "confidence": null,
+        "check_locally": null,
+        "seasons": null
+      },
+      "qualitative_analysis": {
+        "why_suggested": "Serves as your current baseline benchmark to compare water, soil, and disease trade-offs.",
+        "nasa_evidence": "Landsat/MODIS NDVI shows bare ground from Oct–Jan, coinciding with peak GPM winter rainfall.",
+        "benefits": [
+          "Maintains familiar field workflow and equipment setup",
+          "Requires no upfront cover-crop seed purchase"
+        ],
+        "information_gaps": [
+          "Exact baseline soil N-P-K and micronutrient levels require a physical lab soil test"
+        ],
+        "local_risks_for_review": [
+          "Exposed topsoil during peak winter rainfall on a 3.4% SRTM slope increases erosion risk",
+          "Back-to-back Solanaceae crops (Tomatoes followed by Bell Peppers) increase soil-borne pathogen carryover"
+        ]
+      }
+    },
+    {
+      "strategy_id": "soil_builder_legume",
+      "title": "Strategy 2: Nitrogen-Fixing Cover + Cash Crop Rotation",
+      "is_baseline": false,
+      "timeline": [
+        {
+          "year": 2026,
+          "season": "warm_season",
+          "crops": ["bell_pepper"],
+          "alternate_crop_ids": [],
+          "is_mix": false,
+          "purpose": "Primary cash crop yield"
+        },
+        {
+          "year": 2026,
+          "season": "cool_season",
+          "crops": ["crimson_clover", "winter_rye"],
+          "alternate_crop_ids": [],
+          "is_mix": true,
+          "purpose": "Overwinter nitrogen fixation and slope erosion protection"
+        }
+      ],
+      "simulation_scores": {
+        "computed_by": "simulation_engine",
+        "overall_success_score": null,
+        "water_efficiency_score": null,
+        "erosion_protection_score": null,
+        "pest_break_score": null,
+        "season_fit_score": null,
+        "income_score": null,
+        "soil_health_delta": null,
+        "estimated_irrigation_mm": null,
+        "nitrogen_balance_kg_ha": null,
+        "confidence": null,
+        "check_locally": null,
+        "seasons": null
+      },
+      "qualitative_analysis": {
+        "why_suggested": "Addresses bare-soil winter erosion and replenishes depleted soil nitrogen to match your Soil Health priority (8/10).",
+        "nasa_evidence": "GPM climatology shows sufficient autumn rainfall to establish cool-season cover crops without irrigation, stabilizing the 3.4% SRTM slope.",
+        "benefits": [
+          "Legume component biologically fixes atmospheric nitrogen for the following warm-season crop",
+          "Fibrous rye root network anchors topsoil and improves winter rainfall infiltration"
+        ],
+        "information_gaps": [
+          "Spring termination method (mowing, crimping, or tilling) depends on available farm or garden equipment"
+        ],
+        "local_risks_for_review": [
+          "Cover crop must be terminated ahead of spring planting so residual growth does not compete for early-season SMAP soil moisture"
+        ]
+      }
+    },
+    {
+      "strategy_id": "drought_resilient_diversified",
+      "title": "Strategy 3: Low-Water / Pest-Break Diversified Rotation",
+      "is_baseline": false,
+      "timeline": [
+        {
+          "year": 2026,
+          "season": "warm_season",
+          "crops": ["bush_bean"],
+          "alternate_crop_ids": ["bell_pepper"],
+          "is_mix": false,
+          "purpose": "Shorter-season nitrogen-fixing cash crop to break Solanaceae pest cycle"
+        },
+        {
+          "year": 2026,
+          "season": "cool_season",
+          "crops": ["winter_rye"],
+          "alternate_crop_ids": ["crimson_clover"],
+          "is_mix": false,
+          "purpose": "Low-input winter ground cover and weed suppression"
+        }
+      ],
+      "simulation_scores": {
+        "computed_by": "simulation_engine",
+        "overall_success_score": null,
+        "water_efficiency_score": null,
+        "erosion_protection_score": null,
+        "pest_break_score": null,
+        "season_fit_score": null,
+        "income_score": null,
+        "soil_health_delta": null,
+        "estimated_irrigation_mm": null,
+        "nitrogen_balance_kg_ha": null,
+        "confidence": null,
+        "check_locally": null,
+        "seasons": null
+      },
+      "qualitative_analysis": {
+        "why_suggested": "Aligns with your Water priority (9/10) by reducing peak summer irrigation demand and rotating out of the Solanaceae family.",
+        "nasa_evidence": "NASA POWER, ECOSTRESS, and GRACE trends show high late-summer evaporative stress and gradual groundwater decline, favoring shorter-cycle crops.",
+        "benefits": [
+          "Interrupts Solanaceae-specific soil pests and fungal disease cycles",
+          "Reduces peak late-summer irrigation demand compared to long-season fruiting crops"
+        ],
+        "information_gaps": [
+          "Local market pricing and buyer demand for Bush Beans versus Bell Peppers require grower confirmation"
+        ],
+        "local_risks_for_review": [
+          "Verify local seed availability and planting dates against regional late-spring frost probabilities"
+        ]
+      }
+    }
+  ],
+  "ai_agronomist_context_seed": "Full structured JSON payload injected into the Results Page AI Chat-Box system prompt."
+}
