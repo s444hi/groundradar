@@ -17,6 +17,7 @@ src/simulation/
   data/crops.json              shared crop list, the only source of crop traits
   fixtures/demo-field.json     teammate's demo field payload
   engine/                      types, frost, timeline, soil, scoring, simulate, confidence, flags, optimize
+  engine/index.ts               runSimulation(fieldJson) - the public entry point for the Results page
   engine/__tests__/
   components/                  SimulationPage, ModeToggle, PrioritySliders, RotationCompare, RotationLane,
                                Timeline, CropCard, GapSlot, CoverCropPicker, ScoreBadge, DinoRunner,

@@ -215,3 +215,57 @@ export interface SimulationScores {
   check_locally: string[] | null;
   seasons: SeasonResult[] | null;
 }
+
+// --- Full field JSON (teammate's input/output contract) ---
+
+export interface Location {
+  latitude: number;
+  longitude: number;
+}
+
+export interface FieldProfile {
+  field_id: string;
+  mode: FarmMode;
+  location: Location;
+  area_acres: number;
+  elevation_m: number;
+  slope_percent: number;
+  soil: SoilProfile;
+}
+
+export interface SurveyInputs {
+  past_rotation: PastRotationSlot[];
+  planned_rotation: PastRotationSlot[];
+  priorities: Priorities;
+}
+
+export interface LongTermTrends {
+  temp_trend_c_per_decade: number;
+  precip_trend_pct_per_decade: number;
+  grace_groundwater_cm_per_yr: number;
+}
+
+export interface NasaDiagnosticsSummary {
+  smap_soil_moisture_status: string;
+  gpm_rainfall_pattern: string;
+  ecostress_evap_stress: string;
+  heat_stress_days_above_35c: number;
+  erosion_vulnerability: Level;
+  typical_bare_soil_months: number[];
+  peak_vegetation_stress_months: number[];
+}
+
+export interface ClimateData {
+  frost_dates: FrostDates;
+  weekly_climatology: WeeklyClimatologyEntry[];
+  long_term_trends: LongTermTrends;
+  nasa_diagnostics_summary: NasaDiagnosticsSummary;
+}
+
+export interface FieldJson {
+  field_profile: FieldProfile;
+  survey_inputs: SurveyInputs;
+  climate_data: ClimateData;
+  rotation_strategies: RotationStrategy[];
+  ai_agronomist_context_seed?: string;
+}
