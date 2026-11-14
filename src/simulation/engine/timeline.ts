@@ -34,7 +34,7 @@ function computeSlotOccupancy(
   const rawPlantingWeek = frostWeeks[crop.planting_window.anchor] + crop.planting_window.start_week_offset;
   const startAbsoluteWeek = clamp(yearOffset * 52 + (rawPlantingWeek - 1), 0, totalWeeks - 1);
   const durationWeeks = Math.ceil(crop.days_to_maturity / 7);
-  const endAbsoluteWeek = clamp(startAbsoluteWeek + durationWeeks, 0, totalWeeks - 1);
+  const endAbsoluteWeek = clamp(startAbsoluteWeek + durationWeeks - 1, 0, totalWeeks - 1);
 
   return slot.crops.map((cropId) => ({
     cropId,

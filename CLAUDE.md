@@ -43,7 +43,7 @@ All scores are 0-100 where higher = better:
 1. Convert frost dates to week of year (1-52). Planting window = the crop's anchor frost week + its start/end offsets.
 2. Starting soil (0-100 scales; low/medium/high = 25/50/75): nitrogen, moisture, organic matter from the field soil levels. Pest pressure per plant family starts from pest_carryover_family/risk plus the past rotation.
 3. Repeat each strategy for 3 years by default so carryover shows.
-4. Build a weekly timeline. A crop occupies its planting week through planting week + ceil(days_to_maturity / 7). Gaps and fallow count as bare soil.
+4. Build a weekly timeline. A crop occupies its planting week through planting week + ceil(days_to_maturity / 7) - 1, i.e. exactly ceil(days_to_maturity / 7) weeks. Gaps and fallow count as bare soil.
 5. Score each season. Every point change must produce a reason string.
    - Season fit: penalty if a non-frost-tolerant crop is in the ground during frost weeks, or it can't fit its planting window.
    - Water: crop water need vs. rainfall + soil moisture during its weeks.

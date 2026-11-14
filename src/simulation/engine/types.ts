@@ -75,6 +75,41 @@ export interface RotationSlot {
   purpose: string;
 }
 
+// Narrower than RotationSlot: survey_inputs.past_rotation/planned_rotation
+// entries only carry year, season, and crops.
+export interface PastRotationSlot {
+  year: number;
+  season: Season;
+  crops: CropId[];
+}
+
+export interface Priorities {
+  water: number; // 0-10
+  income: number; // 0-10
+  soil_health: number; // 0-10
+  pests: number; // 0-10
+}
+
+export interface SoilProfile {
+  texture_class: string;
+  sand_percent: number;
+  silt_percent: number;
+  clay_percent: number;
+  organic_carbon_g_kg: number;
+  organic_matter_level: Level;
+  drainage_runoff_risk: Level;
+  nitrogen_level: Level;
+  pest_carryover_risk: Level;
+  pest_carryover_family: Family;
+}
+
+// Carried season-to-season by soil.ts; threads carryover through simulate.ts.
+export interface SoilState {
+  nitrogen: number; // 0-100
+  organicMatter: number; // 0-100
+  pestPressureByFamily: Record<Family, number>; // 0-100 each
+}
+
 export interface QualitativeAnalysis {
   why_suggested: string;
   nasa_evidence: string;
@@ -149,6 +184,10 @@ export interface SeasonSubscores {
   pest_break_score: number;
   season_fit_score: number;
   income_score: number;
+  // Internal per-season category (rule 5's "Nitrogen" scoring). Not one of
+  // the top-level SimulationScores fields; it feeds soil_health_delta and
+  // overall_success_score's priority weighting instead.
+  nitrogen_score: number;
 }
 
 export interface SeasonResult {

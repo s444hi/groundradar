@@ -51,16 +51,16 @@ describe("buildTimeline", () => {
     const result = buildTimeline(tomatoStrategy, crops, frostWeeks);
 
     // last_spring_frost week 11 + start_week_offset 1 = planting week 12
-    // -> startAbsoluteWeek 11; ceil(75/7) = 11 weeks duration -> endAbsoluteWeek 22
-    for (let w = 11; w <= 22; w++) {
+    // -> startAbsoluteWeek 11; ceil(75/7) = 11 weeks -> endAbsoluteWeek 21
+    for (let w = 11; w <= 21; w++) {
       expect(result.weeks[w].cropIds).toContain("tomato");
       expect(result.weeks[w].isBare).toBe(false);
     }
     expect(result.weeks[10].isBare).toBe(true);
-    expect(result.weeks[23].isBare).toBe(true);
+    expect(result.weeks[22].isBare).toBe(true);
 
     // Same window recurs shifted by exactly 52 weeks in year offset 1.
-    for (let w = 11; w <= 22; w++) {
+    for (let w = 11; w <= 21; w++) {
       expect(result.weeks[w + 52].cropIds).toContain("tomato");
       expect(result.weeks[w + 52].isBare).toBe(false);
     }
@@ -72,23 +72,23 @@ describe("buildTimeline", () => {
     expect(result.weeks.every((w) => !w.cropIds.includes("fallow"))).toBe(true);
 
     const nonBareWeekCount = result.weeks.filter((w) => !w.isBare).length;
-    // bell_pepper: ceil(75/7) + 1 = 12 occupied weeks per year, over 3 years.
-    expect(nonBareWeekCount).toBe(3 * 12);
+    // bell_pepper: ceil(75/7) = 11 occupied weeks per year, over 3 years.
+    expect(nonBareWeekCount).toBe(3 * 11);
   });
 
   it("paints both crop ids of a mix into the same shared window, including a forward wrap", () => {
     const result = buildTimeline(soilBuilderStrategy, crops, frostWeeks);
 
     // first_fall_frost week 46 + start_week_offset -8 = planting week 38
-    // -> startAbsoluteWeek 37; ceil(180/7) = 26 weeks duration -> endAbsoluteWeek 63
+    // -> startAbsoluteWeek 37; ceil(180/7) = 26 weeks -> endAbsoluteWeek 62
     expect(result.weeks[37].cropIds).toEqual(expect.arrayContaining(["crimson_clover", "winter_rye"]));
     expect(result.weeks[37].isBare).toBe(false);
-    expect(result.weeks[63].cropIds).toEqual(expect.arrayContaining(["crimson_clover", "winter_rye"]));
-    expect(result.weeks[63].isBare).toBe(false);
+    expect(result.weeks[62].cropIds).toEqual(expect.arrayContaining(["crimson_clover", "winter_rye"]));
+    expect(result.weeks[62].isBare).toBe(false);
 
     // Forward wrap lands correctly in the next repeat year.
-    expect(result.weeks[63].yearOffset).toBe(1);
-    expect(result.weeks[63].week).toBe(12);
+    expect(result.weeks[62].yearOffset).toBe(1);
+    expect(result.weeks[62].week).toBe(11);
 
     // No backward bleed into the start of the timeline.
     expect(result.weeks[0].isBare).toBe(true);

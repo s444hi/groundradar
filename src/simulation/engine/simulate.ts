@@ -1,0 +1,107 @@
+import { getFrostWeeks } from "./frost";
+import { initSoilState, updateSoilAfterSeason } from "./soil";
+import { scoreSeason } from "./scoring";
+import type {
+  CropsById,
+  FrostDates,
+  PastRotationSlot,
+  Priorities,
+  RotationStrategy,
+  SeasonResult,
+  SimulationScores,
+  SoilProfile,
+  WeeklyClimatologyEntry,
+} from "./types";
+
+export interface SimulateInput {
+  strategy: RotationStrategy;
+  crops: CropsById;
+  soil: SoilProfile;
+  pastRotation: PastRotationSlot[];
+  frostDates: FrostDates;
+  weeklyClimatology: WeeklyClimatologyEntry[];
+  slopePercent: number;
+  priorities: Priorities;
+  years?: number; // default 3, per engine rule 3
+}
+
+// Season fit always counts at full weight (engine rule 8); using the top of
+// the 0-10 priority scale keeps it comparable to the priority-weighted terms.
+const SEASON_FIT_WEIGHT = 10;
+
+function average(values: number[]): number {
+  return values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+// Priority weighting (engine rule 8): water -> water; soil_health ->
+// nitrogen + erosion; pests -> pests; income -> income.
+function weightedOverall(season: SeasonResult, priorities: Priorities): number {
+  const { subscores } = season;
+  const soilHealthComponent = (subscores.nitrogen_score + subscores.erosion_protection_score) / 2;
+
+  const numerator =
+    subscores.season_fit_score * SEASON_FIT_WEIGHT +
+    subscores.water_efficiency_score * priorities.water +
+    soilHealthComponent * priorities.soil_health +
+    subscores.pest_break_score * priorities.pests +
+    subscores.income_score * priorities.income;
+  const denominator =
+    SEASON_FIT_WEIGHT + priorities.water + priorities.soil_health + priorities.pests + priorities.income;
+
+  return numerator / denominator;
+}
+
+/**
+ * Runs a rotation strategy for `years` repeats (default 3), threading soil
+ * state season to season (engine rules 2, 3, 6) and scoring each season
+ * (rule 5) to produce the strategy-level simulation_scores.
+ */
+export function simulateStrategy(input: SimulateInput): SimulationScores {
+  const years = input.years ?? 3;
+  const frostWeeks = getFrostWeeks(input.frostDates);
+
+  const initialSoil = initSoilState(input.soil, input.pastRotation, input.crops);
+  let soil = initialSoil;
+  const seasons: SeasonResult[] = [];
+
+  for (let yearOffset = 0; yearOffset < years; yearOffset++) {
+    for (const baseSlot of input.strategy.timeline) {
+      const season = scoreSeason({
+        year: baseSlot.year + yearOffset,
+        season: baseSlot.season,
+        cropIds: baseSlot.crops,
+        crops: input.crops,
+        frostWeeks,
+        weeklyClimatology: input.weeklyClimatology,
+        slopePercent: input.slopePercent,
+        soilBeforeSeason: soil,
+      });
+      seasons.push(season);
+      soil = updateSoilAfterSeason(soil, baseSlot.crops, input.crops);
+    }
+  }
+
+  const overallPerSeason = seasons.map((s) => weightedOverall(s, input.priorities));
+  const estimatedIrrigationMm = seasons.reduce(
+    (sum, s) => sum + Math.max(0, 100 - s.subscores.water_efficiency_score) * 2,
+    0,
+  );
+  const soilHealthDelta =
+    (soil.nitrogen + soil.organicMatter) / 2 - (initialSoil.nitrogen + initialSoil.organicMatter) / 2;
+
+  return {
+    computed_by: "simulation_engine",
+    overall_success_score: average(overallPerSeason),
+    water_efficiency_score: average(seasons.map((s) => s.subscores.water_efficiency_score)),
+    erosion_protection_score: average(seasons.map((s) => s.subscores.erosion_protection_score)),
+    pest_break_score: average(seasons.map((s) => s.subscores.pest_break_score)),
+    season_fit_score: average(seasons.map((s) => s.subscores.season_fit_score)),
+    income_score: average(seasons.map((s) => s.subscores.income_score)),
+    soil_health_delta: soilHealthDelta,
+    estimated_irrigation_mm: estimatedIrrigationMm,
+    nitrogen_balance_kg_ha: (soil.nitrogen - initialSoil.nitrogen) * 2,
+    confidence: null, // populated by confidence.ts (not built yet)
+    check_locally: null, // populated by flags.ts (not built yet)
+    seasons,
+  };
+}
