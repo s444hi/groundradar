@@ -1,5 +1,7 @@
+import SimulationPage from './simulation/components/SimulationPage/SimulationPage'
+
 function App() {
-  return <div>Ground Radar</div>
+  return <SimulationPage />
 }
 
 export default App
