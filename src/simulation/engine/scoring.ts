@@ -294,7 +294,7 @@ function scoreErosion(
   if (bareWeekCount > 0) {
     reasons.push({
       delta: score - 100,
-      text: `${bareWeekCount} bare or lightly-covered week(s) this season on a ${slopePercent}% slope raised erosion risk (score ${score.toFixed(0)}/100).`,
+      text: `${bareWeekCount} bare or lightly-covered week(s) this season on a ${slopePercent}% slope raised erosion risk.`,
     });
   }
   if (protectedWeekCount > 0) {
