@@ -4,6 +4,7 @@ import type {
   CropsById,
   FrostWeeks,
   IncomeValue,
+  NutrientRole,
   Season,
   SeasonResult,
   SeasonSubscores,
@@ -20,7 +21,19 @@ function clamp(value: number, min: number, max: number): number {
 
 const WATER_NEED_SCORE: Record<WaterNeed, number> = { none: 0, low: 25, medium: 50, high: 75 };
 const INCOME_VALUE_SCORE: Record<IncomeValue, number> = { none: 0, low: 35, medium: 65, high: 100 };
-const EROSION_RISK_SCALE = 1; // points of erosion score lost per unit of accumulated weekly risk
+// exp(-EROSION_DECAY_RATE * risk): a smooth curve instead of a hard clamp, so
+// a fully-bare, rainy, sloped season lands in the low-to-mid 20s rather than
+// saturating at 0, and partial cover lands continuously in between.
+const EROSION_DECAY_RATE = 0.0145;
+// How exposed each nutrient role is to the current soil nitrogen level: a
+// heavy feeder is fully exposed, a nitrogen fixer makes most of its own
+// nitrogen so is mostly (not fully) buffered from the current level.
+const NITROGEN_SENSITIVITY: Record<NutrientRole, number> = {
+  heavy_feeder: 1,
+  light_feeder: 0.5,
+  nitrogen_fixer: 0.15,
+  none: 0.3,
+};
 
 export interface ScoreSeasonInput {
   year: number;
@@ -168,45 +181,52 @@ function scoreNitrogen(
   soilBeforeSeason: SoilState,
 ): { score: number; reasons: ScoreReason[] } {
   const livingCrops = getLivingCrops(cropIds, crops);
-  let score = 100;
+  if (livingCrops.length === 0) {
+    return { score: 100, reasons: [{ delta: 0, text: "No crop planted this season; nitrogen levels are unaffected." }] };
+  }
+
   const reasons: ScoreReason[] = [];
+  const perCropScores: number[] = [];
 
   for (const crop of livingCrops) {
-    if (crop.nutrient_role === "heavy_feeder") {
-      const penalty = clamp((100 - soilBeforeSeason.nitrogen) * 0.4, 0, 40);
-      if (penalty > 0) {
-        score -= penalty;
-        reasons.push({
-          delta: -penalty,
-          text: `${crop.display_name} is a heavy feeder and soil nitrogen is only at ${soilBeforeSeason.nitrogen.toFixed(0)}/100, limiting growth.`,
-        });
-      }
+    const sensitivity = NITROGEN_SENSITIVITY[crop.nutrient_role];
+    const cropScore = clamp(100 - (100 - soilBeforeSeason.nitrogen) * sensitivity, 0, 100);
+    perCropScores.push(cropScore);
+    if (cropScore < 100) {
+      reasons.push({
+        delta: cropScore - 100,
+        text: `${crop.display_name} (${crop.nutrient_role.replace("_", " ")}) is scored against the current soil nitrogen level (${soilBeforeSeason.nitrogen.toFixed(0)}/100), landing at ${cropScore.toFixed(0)}.`,
+      });
     }
     if (crop.nutrient_role === "nitrogen_fixer") {
-      score += 10;
       reasons.push({
-        delta: 10,
-        text: `${crop.display_name} fixes its own nitrogen, replenishing soil nitrogen for future seasons.`,
+        delta: 0,
+        text: `${crop.display_name} also fixes its own nitrogen, replenishing soil nitrogen for future seasons.`,
       });
     }
   }
 
+  const score = clamp(perCropScores.reduce((a, b) => a + b, 0) / perCropScores.length, 0, 100);
   if (reasons.length === 0) {
     reasons.push({
       delta: 0,
-      text: "No heavy feeders or nitrogen fixers planted this season; nitrogen levels are unaffected.",
+      text: `Soil nitrogen (${soilBeforeSeason.nitrogen.toFixed(0)}/100) has no scoring effect on this season's crop(s).`,
     });
   }
-  return { score: clamp(score, 0, 100), reasons };
+  return { score, reasons };
 }
 
+// Only cash crops are checked against carried-over pest pressure: a cover
+// crop (or fallow) is grown for soil benefit, not yield, and gets no penalty
+// for its own family's pressure, so a cover-cropped season can never score
+// worse on pests than leaving the ground bare.
 function scorePests(
   cropIds: CropId[],
   crops: CropsById,
   soilBeforeSeason: SoilState,
 ): { score: number; reasons: ScoreReason[] } {
-  const livingCrops = getLivingCrops(cropIds, crops);
-  const families = new Set(livingCrops.map((c) => c.family));
+  const cashCrops = getLivingCrops(cropIds, crops).filter((c) => !c.is_cover_crop);
+  const families = new Set(cashCrops.map((c) => c.family));
   let score = 100;
   const reasons: ScoreReason[] = [];
 
@@ -225,7 +245,10 @@ function scorePests(
   }
 
   if (reasons.length === 0) {
-    reasons.push({ delta: 0, text: "No crop planted this season, so no pest exposure." });
+    reasons.push({
+      delta: 0,
+      text: "No cash crop planted this season (fallow or cover crop only), so there is no pest exposure to score.",
+    });
   }
   return { score: clamp(score, 0, 100), reasons };
 }
@@ -266,12 +289,12 @@ function scoreErosion(
     totalRisk += rainfall * (slopePercent / 10) * (1 - weekProtection);
   }
 
-  const score = clamp(100 - totalRisk * EROSION_RISK_SCALE, 0, 100);
+  const score = clamp(100 * Math.exp(-EROSION_DECAY_RATE * totalRisk), 0, 100);
   const reasons: ScoreReason[] = [];
   if (bareWeekCount > 0) {
     reasons.push({
-      delta: -(totalRisk * EROSION_RISK_SCALE),
-      text: `${bareWeekCount} bare or lightly-covered week(s) this season on a ${slopePercent}% slope raised erosion risk.`,
+      delta: score - 100,
+      text: `${bareWeekCount} bare or lightly-covered week(s) this season on a ${slopePercent}% slope raised erosion risk (score ${score.toFixed(0)}/100).`,
     });
   }
   if (protectedWeekCount > 0) {
@@ -286,15 +309,30 @@ function scoreErosion(
   return { score, reasons };
 }
 
+// Whether this slot has at least one cash crop (not fallow, not a cover
+// crop). Exported so simulate.ts can exclude non-cash seasons from the
+// strategy-level income average, rather than scoring them as failures.
+export function seasonHasCashCrop(cropIds: CropId[], crops: CropsById): boolean {
+  return getLivingCrops(cropIds, crops).some((c) => !c.is_cover_crop);
+}
+
 function scoreIncome(cropIds: CropId[], crops: CropsById): { score: number; reasons: ScoreReason[] } {
-  const livingCrops = getLivingCrops(cropIds, crops);
-  if (livingCrops.length === 0) {
-    return { score: 0, reasons: [{ delta: -100, text: "No crop planted this season, so no income is generated." }] };
+  const cashCrops = getLivingCrops(cropIds, crops).filter((c) => !c.is_cover_crop);
+  if (cashCrops.length === 0) {
+    return {
+      score: 100,
+      reasons: [
+        {
+          delta: 0,
+          text: "No cash crop planted this season (fallow or cover crop only); this season is excluded from the income average.",
+        },
+      ],
+    };
   }
 
-  const values = livingCrops.map((c) => INCOME_VALUE_SCORE[c.income_value]);
+  const values = cashCrops.map((c) => INCOME_VALUE_SCORE[c.income_value]);
   const score = clamp(values.reduce((a, b) => a + b, 0) / values.length, 0, 100);
-  const names = livingCrops.map((c) => c.display_name).join(" + ");
+  const names = cashCrops.map((c) => c.display_name).join(" + ");
   return {
     score,
     reasons: [{ delta: score - 100, text: `${names} income potential sets this season's income score to ${score.toFixed(0)}.` }],

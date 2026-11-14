@@ -1,6 +1,6 @@
 import { getFrostWeeks } from "./frost";
 import { initSoilState, updateSoilAfterSeason } from "./soil";
-import { scoreSeason } from "./scoring";
+import { scoreSeason, seasonHasCashCrop } from "./scoring";
 import type {
   CropsById,
   FrostDates,
@@ -89,6 +89,10 @@ export function simulateStrategy(input: SimulateInput): SimulationScores {
   const soilHealthDelta =
     (soil.nitrogen + soil.organicMatter) / 2 - (initialSoil.nitrogen + initialSoil.organicMatter) / 2;
 
+  // Fallow and cover-crop-only seasons aren't income failures, so they're
+  // excluded from the income average rather than counted as a 0.
+  const cashSeasons = seasons.filter((s) => seasonHasCashCrop(s.crops, input.crops));
+
   return {
     computed_by: "simulation_engine",
     overall_success_score: average(overallPerSeason),
@@ -96,7 +100,7 @@ export function simulateStrategy(input: SimulateInput): SimulationScores {
     erosion_protection_score: average(seasons.map((s) => s.subscores.erosion_protection_score)),
     pest_break_score: average(seasons.map((s) => s.subscores.pest_break_score)),
     season_fit_score: average(seasons.map((s) => s.subscores.season_fit_score)),
-    income_score: average(seasons.map((s) => s.subscores.income_score)),
+    income_score: cashSeasons.length > 0 ? average(cashSeasons.map((s) => s.subscores.income_score)) : null,
     soil_health_delta: soilHealthDelta,
     estimated_irrigation_mm: estimatedIrrigationMm,
     nitrogen_balance_kg_ha: (soil.nitrogen - initialSoil.nitrogen) * 2,

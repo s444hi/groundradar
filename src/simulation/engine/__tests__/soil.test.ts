@@ -74,4 +74,18 @@ describe("updateSoilAfterSeason", () => {
     expect(next.nitrogen).toBe(fresh.nitrogen);
     expect(next.organicMatter).toBe(fresh.organicMatter);
   });
+
+  it("raises pest pressure much less for a cover crop than for a cash crop of the same family", () => {
+    // tomato and bell_pepper are both solanaceae: one is a cash crop, neither
+    // is a cover crop here, so compare against a same-family cover crop by
+    // using poaceae: corn (cash) vs. winter_rye/oats (cover).
+    const afterCashCorn = updateSoilAfterSeason(fresh, ["corn"], crops);
+    const afterCoverRye = updateSoilAfterSeason(fresh, ["winter_rye"], crops);
+
+    const cashRaise = afterCashCorn.pestPressureByFamily.poaceae - fresh.pestPressureByFamily.poaceae;
+    const coverRaise = afterCoverRye.pestPressureByFamily.poaceae - fresh.pestPressureByFamily.poaceae;
+
+    expect(coverRaise).toBeGreaterThan(0);
+    expect(coverRaise).toBeLessThan(cashRaise);
+  });
 });

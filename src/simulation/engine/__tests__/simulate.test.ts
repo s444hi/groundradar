@@ -55,4 +55,25 @@ describe("simulateStrategy", () => {
 
     expect(soilBuilder.overall_success_score).toBeGreaterThan(baseline.overall_success_score!);
   });
+
+  it("never scores soil_builder_legume worse than existing_baseline on pests", () => {
+    const baseline = simulate(baselineStrategy);
+    const soilBuilder = simulate(soilBuilderStrategy);
+
+    expect(soilBuilder.pest_break_score).toBeGreaterThanOrEqual(baseline.pest_break_score!);
+  });
+
+  it("scores existing_baseline's erosion protection in the 15-40 range (a bare, sloped winter every year)", () => {
+    const baseline = simulate(baselineStrategy);
+
+    expect(baseline.erosion_protection_score).toBeGreaterThanOrEqual(15);
+    expect(baseline.erosion_protection_score).toBeLessThanOrEqual(40);
+  });
+
+  it("scores existing_baseline and soil_builder_legume equally on income (same cash crop, different non-cash winter)", () => {
+    const baseline = simulate(baselineStrategy);
+    const soilBuilder = simulate(soilBuilderStrategy);
+
+    expect(soilBuilder.income_score).toBe(baseline.income_score);
+  });
 });
