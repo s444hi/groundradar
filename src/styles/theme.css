@@ -1,0 +1,40 @@
+/* Ground Radar design system — shared CSS variables.
+   See CLAUDE.md "Design system" section / docs/design-reference.png. */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Colors — background / text */
+  --color-bg: #FFFFFF;
+  --color-bg-subtle: #F7F6F2;
+  --color-text: #111111;
+  --color-text-muted: #6B6B66;
+  --color-text-on-dark: #FFFFFF;
+
+  /* Colors — brand */
+  --color-olive: #4B5A23;
+  --color-olive-hover: #3C4A1B;
+  --color-sage: #95A07A;
+  --color-pale-green: #DDE8C4;
+  --color-cream: #ECE6D8;
+  --color-border: #E5E4DE;
+  --color-sky-start: #C9D6E0;
+  --color-sky-end: #9FB4C4;
+
+  /* Colors — simulation semantics */
+  --color-sim-good: #5F7A2E;
+  --color-sim-warning: #C9A23A;
+  --color-sim-risk: #B5543A;
+  --color-sim-bare-soil: #8B6B4A;
+  --color-sim-cover-crop: #95A07A;
+  --color-sim-water: #7FA1B8;
+
+  /* Fonts */
+  --font-serif: 'Newsreader', serif;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  /* Radii */
+  --radius-pill: 999px;
+  --radius-card: 20px;
+}
