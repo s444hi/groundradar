@@ -106,3 +106,4 @@ Sim styling:
 - Keep the engine pure and unit-tested.
 - Show crop trait values and estimates as estimates in the UI.
 - Commit after each build step.
+- Never add Co-Authored-By or any other attribution lines to commit messages.
