@@ -22,13 +22,11 @@ import {
 } from "../CoverCropPicker/coverCropEdits";
 import type { GapInfo } from "../CoverCropPicker/coverCropEdits";
 import PlaybackControls from "../PlaybackControls/PlaybackControls";
-import PlantMode from "../PlantPicker/PlantMode";
 import PrioritySliders from "../PrioritySliders/PrioritySliders";
 import RotationLane from "../RotationLane/RotationLane";
 import type { DragSwapData } from "../Timeline/useDragSwap";
 import { usePlayback } from "../Timeline/usePlayback";
 import Toolbar from "../Toolbar/Toolbar";
-import type { SimulationTab } from "../Toolbar/Toolbar";
 import type { OptimizerSuggestion, ScoredRotationStrategy } from "../types";
 import { describeChanges } from "./describeChanges";
 import { swapAlternateCrop, swapTemplateSlots } from "./timelineEdits";
@@ -68,7 +66,6 @@ interface OpenGap {
 
 export default function SimulationPage() {
   const [fieldJson, setFieldJson] = useState<FieldJson>(originalDemoField);
-  const [activeTab, setActiveTab] = useState<SimulationTab>("rotation");
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
   const [openGap, setOpenGap] = useState<OpenGap | null>(null);
   const [suggestions, setSuggestions] = useState<Record<number, OptimizerSuggestion>>({});
@@ -305,8 +302,6 @@ export default function SimulationPage() {
       <AppHeader fieldProfile={originalDemoField.field_profile} />
       <div style={pageStyle}>
         <Toolbar
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
           prioritiesOpen={prioritiesOpen}
           onTogglePriorities={() => setPrioritiesOpen((open) => !open)}
           onFindBetterOrder={handleFindBetterOrder}
@@ -318,46 +313,40 @@ export default function SimulationPage() {
             onReset={handleResetPriorities}
           />
         )}
-        {activeTab === "rotation" ? (
-          <>
-            {optimizerRanWithNoImprovement && (
-              <p style={noImprovementStyle}>These are already the best orders we can find.</p>
-            )}
-            <PlaybackControls playback={playback} />
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-              {rankedEntries.map(({ strategy, index }, rankPosition) => (
-                <RotationLane
-                  key={strategy.strategy_id}
-                  ref={(node) => {
-                    if (node) laneNodesRef.current.set(strategy.strategy_id, node);
-                    else laneNodesRef.current.delete(strategy.strategy_id);
-                  }}
-                  strategy={strategy}
-                  weeklyTimeline={weeklyTimelines[index]}
-                  crops={crops}
-                  playback={playback}
-                  rank={rankPosition + 1}
-                  strategyIndex={index}
-                  templateLength={fieldJson.rotation_strategies[index].timeline.length}
-                  isEdited={!isSameTimeline(fieldJson.rotation_strategies[index].timeline, originalDemoField.rotation_strategies[index].timeline)}
-                  onSwapAlternate={(templateIndex) => handleSwapAlternate(index, templateIndex)}
-                  onReset={() => handleReset(index)}
-                  openGapKey={openGap?.key ?? null}
-                  pickerOptions={pickerOptions}
-                  onToggleGap={handleToggleGap}
-                  onClosePicker={handleClosePicker}
-                  onPickCoverCrop={handlePickCoverCrop}
-                  onRemoveCoverCrop={(templateIndex) => handleRemoveCoverCrop(index, templateIndex)}
-                  suggestion={suggestions[index] ?? null}
-                  onAcceptSuggestion={() => handleAcceptSuggestion(index)}
-                  onDismissSuggestion={() => handleDismissSuggestion(index)}
-                />
-              ))}
-            </DndContext>
-          </>
-        ) : (
-          <PlantMode fieldJson={fieldJson} crops={crops} />
+        {optimizerRanWithNoImprovement && (
+          <p style={noImprovementStyle}>These are already the best orders we can find.</p>
         )}
+        <PlaybackControls playback={playback} />
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          {rankedEntries.map(({ strategy, index }, rankPosition) => (
+            <RotationLane
+              key={strategy.strategy_id}
+              ref={(node) => {
+                if (node) laneNodesRef.current.set(strategy.strategy_id, node);
+                else laneNodesRef.current.delete(strategy.strategy_id);
+              }}
+              strategy={strategy}
+              weeklyTimeline={weeklyTimelines[index]}
+              crops={crops}
+              playback={playback}
+              rank={rankPosition + 1}
+              strategyIndex={index}
+              templateLength={fieldJson.rotation_strategies[index].timeline.length}
+              isEdited={!isSameTimeline(fieldJson.rotation_strategies[index].timeline, originalDemoField.rotation_strategies[index].timeline)}
+              onSwapAlternate={(templateIndex) => handleSwapAlternate(index, templateIndex)}
+              onReset={() => handleReset(index)}
+              openGapKey={openGap?.key ?? null}
+              pickerOptions={pickerOptions}
+              onToggleGap={handleToggleGap}
+              onClosePicker={handleClosePicker}
+              onPickCoverCrop={handlePickCoverCrop}
+              onRemoveCoverCrop={(templateIndex) => handleRemoveCoverCrop(index, templateIndex)}
+              suggestion={suggestions[index] ?? null}
+              onAcceptSuggestion={() => handleAcceptSuggestion(index)}
+              onDismissSuggestion={() => handleDismissSuggestion(index)}
+            />
+          ))}
+        </DndContext>
       </div>
       <AppFooter />
     </>

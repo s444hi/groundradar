@@ -136,17 +136,12 @@ function scoreSeasonFit(
   return { score: clamp(score, 0, 100), reasons };
 }
 
-export interface ScoreResult {
-  score: number;
-  reasons: ScoreReason[];
-}
-
-export function scoreWater(
+function scoreWater(
   cropIds: CropId[],
   crops: CropsById,
   slotWeeks: number[],
   weeklyClimatology: WeeklyClimatologyEntry[],
-): ScoreResult {
+): { score: number; reasons: ScoreReason[] } {
   const livingCrops = getLivingCrops(cropIds, crops);
   if (livingCrops.length === 0 || slotWeeks.length === 0) {
     return {
@@ -192,11 +187,11 @@ export function scoreWater(
   };
 }
 
-export function scoreNitrogen(
+function scoreNitrogen(
   cropIds: CropId[],
   crops: CropsById,
   soilBeforeSeason: SoilState,
-): ScoreResult {
+): { score: number; reasons: ScoreReason[] } {
   const livingCrops = getLivingCrops(cropIds, crops);
   if (livingCrops.length === 0) {
     return {
@@ -245,11 +240,11 @@ export function scoreNitrogen(
 // crop (or fallow) is grown for soil benefit, not yield, and gets no penalty
 // for its own family's pressure, so a cover-cropped season can never score
 // worse on pests than leaving the ground bare.
-export function scorePests(
+function scorePests(
   cropIds: CropId[],
   crops: CropsById,
   soilBeforeSeason: SoilState,
-): ScoreResult {
+): { score: number; reasons: ScoreReason[] } {
   const cashCrops = getLivingCrops(cropIds, crops).filter((c) => !c.is_cover_crop);
   const families = new Set(cashCrops.map((c) => c.family));
   let score = 100;
@@ -352,7 +347,7 @@ export function seasonHasCashCrop(cropIds: CropId[], crops: CropsById): boolean 
   return getLivingCrops(cropIds, crops).some((c) => !c.is_cover_crop);
 }
 
-export function scoreIncome(cropIds: CropId[], crops: CropsById): ScoreResult {
+function scoreIncome(cropIds: CropId[], crops: CropsById): { score: number; reasons: ScoreReason[] } {
   const cashCrops = getLivingCrops(cropIds, crops).filter((c) => !c.is_cover_crop);
   if (cashCrops.length === 0) {
     return {
