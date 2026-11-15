@@ -8,13 +8,15 @@ import ScoreBadge from "../ScoreBadge/ScoreBadge";
 import Timeline from "../Timeline/Timeline";
 import type { PlaybackApi } from "../Timeline/usePlayback";
 import { useCountUp } from "./useCountUp";
-import type { CropId, CropsById, WeeklyTimeline } from "../../engine/types";
+import type { CropId, CropsById, Priorities, WeeklyTimeline } from "../../engine/types";
 import type { OptimizerSuggestion, ScoredRotationStrategy } from "../types";
 
 export interface RotationLaneProps {
   strategy: ScoredRotationStrategy;
   weeklyTimeline: WeeklyTimeline;
   crops: CropsById;
+  /** Passed through to BreakdownPanel, which quotes the live slider values. */
+  priorities: Priorities;
   playback: PlaybackApi;
   rank: number;
   strategyIndex: number;
@@ -166,6 +168,7 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
     strategy,
     weeklyTimeline,
     crops,
+    priorities,
     playback,
     rank,
     strategyIndex,
@@ -283,6 +286,7 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
       {breakdownExpanded ? (
         <BreakdownPanel
           qualitativeAnalysis={strategy.qualitative_analysis}
+          priorities={priorities}
           seasons={scores.seasons ?? []}
           confidence={scores.confidence!}
           checkLocally={scores.check_locally ?? []}
