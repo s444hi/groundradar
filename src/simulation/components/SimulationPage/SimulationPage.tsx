@@ -8,6 +8,7 @@ import type { CropsById, FieldJson } from "../../engine/types";
 import AppFooter from "../AppFooter/AppFooter";
 import AppHeader from "../AppHeader/AppHeader";
 import RotationLane from "../RotationLane/RotationLane";
+import { usePlayback } from "../Timeline/usePlayback";
 import Toolbar from "../Toolbar/Toolbar";
 import type { ScoredRotationStrategy } from "../types";
 
@@ -32,12 +33,16 @@ export default function SimulationPage() {
     return buildTimeline(baselineStrategy, crops, frostWeeks, 3);
   }, [baselineStrategy]);
 
+  // One shared growth clock: when Step 7 stacks multiple lanes, they all
+  // grow in sync off this same instance.
+  const playback = usePlayback(weeklyTimeline.years * 52);
+
   return (
     <>
       <AppHeader fieldProfile={demoField.field_profile} />
       <div style={pageStyle}>
         <Toolbar />
-        <RotationLane strategy={baselineStrategy} weeklyTimeline={weeklyTimeline} crops={crops} />
+        <RotationLane strategy={baselineStrategy} weeklyTimeline={weeklyTimeline} crops={crops} playback={playback} />
       </div>
       <AppFooter />
     </>

@@ -1,13 +1,11 @@
+import { useEffect, useState } from "react";
 import PixelSprite from "../PixelSprite";
 import { getCropSpriteSet } from "../sprites";
+import type { CropSprite } from "../sprites";
 import { weekToMonthName } from "../../engine/frost";
-import {
-  LABEL_THRESHOLD_PERCENT,
-  PIXEL_SIZE,
-  spriteBottomOffset,
-  TRACK_HEIGHT,
-  WIDE_THRESHOLD_PERCENT,
-} from "../Timeline/layout";
+import { getVisibleStages } from "../Timeline/getVisibleStages";
+import type { GrowthStageKey } from "../Timeline/getVisibleStages";
+import { LABEL_THRESHOLD_PERCENT, PIXEL_SIZE, spriteBottomOffset, TRACK_HEIGHT } from "../Timeline/layout";
 import type { CropId, CropsById } from "../../engine/types";
 
 export interface CropCardProps {
@@ -17,6 +15,7 @@ export interface CropCardProps {
   startAbsoluteWeek: number;
   endAbsoluteWeek: number;
   widthPercent: number;
+  currentWeek: number;
 }
 
 const containerStyle: React.CSSProperties = {
@@ -42,6 +41,30 @@ const labelStyle: React.CSSProperties = {
   padding: "0 2px",
 };
 
+// Pops a newly-visible stage up from the ground. Keyed by the caller so a
+// *new* stage mounts fresh (and animates in) while an already-visible one
+// re-rendering every animation frame keeps its instance (and stays settled).
+function AnimatedStage({ sprite }: { sprite: CropSprite }) {
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div
+      style={{
+        transform: entered ? "scaleY(1)" : "scaleY(0)",
+        transformOrigin: "bottom",
+        transition: "transform 200ms steps(5, end)",
+      }}
+    >
+      <PixelSprite grid={sprite.rows} pixelSize={PIXEL_SIZE} />
+    </div>
+  );
+}
+
 export default function CropCard({
   cropIds,
   crops,
@@ -49,39 +72,39 @@ export default function CropCard({
   startAbsoluteWeek,
   endAbsoluteWeek,
   widthPercent,
+  currentWeek,
 }: CropCardProps) {
   // A mix is co-planted in one shared window (same decision as timeline.ts);
   // the primary crop's category stands in for the whole segment's sprite.
   const spriteSet = getCropSpriteSet(cropIds[0]);
+  const spriteFor: Record<GrowthStageKey, CropSprite> = {
+    sprout: spriteSet.sprout,
+    young: spriteSet.young,
+    full: spriteSet.full,
+  };
+
   const names = cropIds.map((id) => crops[id]?.display_name ?? id).join(" + ");
   const startMonth = weekToMonthName((startAbsoluteWeek % 52) + 1);
   const endMonth = weekToMonthName((endAbsoluteWeek % 52) + 1);
   const monthLabel = startMonth === endMonth ? startMonth : `${startMonth}–${endMonth}`;
   const tooltip = `${names} — ${weekCount} wks · ${monthLabel}`;
 
-  const isWide = widthPercent >= WIDE_THRESHOLD_PERCENT;
-  const showLabel = widthPercent >= LABEL_THRESHOLD_PERCENT;
-  const stages = isWide
-    ? [
-        { sprite: spriteSet.sprout, leftPercent: 18 },
-        { sprite: spriteSet.young, leftPercent: 50 },
-        { sprite: spriteSet.full, leftPercent: 82 },
-      ]
-    : [{ sprite: spriteSet.full, leftPercent: 50 }];
+  const visibleStages = getVisibleStages({ startAbsoluteWeek, weekCount }, widthPercent, currentWeek);
+  const showLabel = widthPercent >= LABEL_THRESHOLD_PERCENT && visibleStages.length > 0;
 
   return (
     <div style={{ ...containerStyle, width: `${widthPercent}%` }} title={tooltip}>
-      {stages.map(({ sprite, leftPercent }, index) => (
+      {visibleStages.map(({ stageKey, leftPercent }) => (
         <div
-          key={index}
+          key={stageKey}
           style={{
             position: "absolute",
             left: `${leftPercent}%`,
             transform: "translateX(-50%)",
-            bottom: `${spriteBottomOffset(sprite)}px`,
+            bottom: `${spriteBottomOffset(spriteFor[stageKey])}px`,
           }}
         >
-          <PixelSprite grid={sprite.rows} pixelSize={PIXEL_SIZE} />
+          <AnimatedStage sprite={spriteFor[stageKey]} />
         </div>
       ))}
       {showLabel && <p style={labelStyle}>{names}</p>}

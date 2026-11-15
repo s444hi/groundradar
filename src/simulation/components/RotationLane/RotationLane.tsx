@@ -1,6 +1,9 @@
 import BreakdownPanel from "../BreakdownPanel/BreakdownPanel";
+import { CONFIDENCE_COLORS } from "../confidenceColor";
 import ScoreBadge from "../ScoreBadge/ScoreBadge";
 import Timeline from "../Timeline/Timeline";
+import type { PlaybackApi } from "../Timeline/usePlayback";
+import { useCountUp } from "./useCountUp";
 import type { CropsById, WeeklyTimeline } from "../../engine/types";
 import type { ScoredRotationStrategy } from "../types";
 
@@ -8,7 +11,10 @@ export interface RotationLaneProps {
   strategy: ScoredRotationStrategy;
   weeklyTimeline: WeeklyTimeline;
   crops: CropsById;
+  playback: PlaybackApi;
 }
+
+const SCORE_COUNT_UP_MS = 600;
 
 // Off by default: a reminder, for internal reference only, of what this
 // static-preview lane deliberately doesn't implement yet (drag-and-drop,
@@ -63,11 +69,38 @@ const smallScoreRowStyle: React.CSSProperties = {
   display: "flex",
   gap: "24px",
   flexWrap: "wrap",
+  flex: 1,
 };
 
-export default function RotationLane({ strategy, weeklyTimeline, crops }: RotationLaneProps) {
+const confidenceBadgeStyle = (color: string): React.CSSProperties => ({
+  display: "inline-block",
+  alignSelf: "flex-start",
+  fontFamily: "var(--font-sans)",
+  fontWeight: 500,
+  fontSize: "14px",
+  color,
+  background: `color-mix(in srgb, ${color} 18%, var(--color-bg))`,
+  borderRadius: "var(--radius-pill)",
+  padding: "6px 16px",
+  marginLeft: "auto",
+});
+
+export default function RotationLane({ strategy, weeklyTimeline, crops, playback }: RotationLaneProps) {
   const scores = strategy.simulation_scores;
   const baseYear = strategy.timeline[0]?.year ?? 0;
+
+  const [overall, water, erosion, pests, seasonFit, income] = useCountUp(
+    [
+      scores.overall_success_score ?? 0,
+      scores.water_efficiency_score ?? 0,
+      scores.erosion_protection_score ?? 0,
+      scores.pest_break_score ?? 0,
+      scores.season_fit_score ?? 0,
+      scores.income_score ?? 0,
+    ],
+    SCORE_COUNT_UP_MS,
+    playback.isFinished,
+  );
 
   return (
     <div
@@ -91,17 +124,20 @@ export default function RotationLane({ strategy, weeklyTimeline, crops }: Rotati
       )}
 
       <div style={scoreRowStyle}>
-        <ScoreBadge label="Overall success" value={scores.overall_success_score ?? 0} size="large" />
+        <ScoreBadge label="Overall success" value={overall} size="large" />
         <div style={smallScoreRowStyle}>
-          <ScoreBadge label="Water" value={scores.water_efficiency_score ?? 0} size="small" colorByScore />
-          <ScoreBadge label="Erosion" value={scores.erosion_protection_score ?? 0} size="small" colorByScore />
-          <ScoreBadge label="Pests" value={scores.pest_break_score ?? 0} size="small" colorByScore />
-          <ScoreBadge label="Season fit" value={scores.season_fit_score ?? 0} size="small" colorByScore />
-          <ScoreBadge label="Income" value={scores.income_score ?? 0} size="small" colorByScore />
+          <ScoreBadge label="Water" value={water} size="small" colorByScore />
+          <ScoreBadge label="Erosion" value={erosion} size="small" colorByScore />
+          <ScoreBadge label="Pests" value={pests} size="small" colorByScore />
+          <ScoreBadge label="Season fit" value={seasonFit} size="small" colorByScore />
+          <ScoreBadge label="Income" value={income} size="small" colorByScore />
+          <span style={confidenceBadgeStyle(CONFIDENCE_COLORS[scores.confidence!.level])}>
+            {scores.confidence!.level}
+          </span>
         </div>
       </div>
 
-      <Timeline weeklyTimeline={weeklyTimeline} crops={crops} baseYear={baseYear} />
+      <Timeline weeklyTimeline={weeklyTimeline} crops={crops} baseYear={baseYear} playback={playback} />
 
       <BreakdownPanel
         qualitativeAnalysis={strategy.qualitative_analysis}

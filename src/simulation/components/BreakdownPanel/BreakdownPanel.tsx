@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Confidence, ConfidenceLevel, QualitativeAnalysis, SeasonResult } from "../../engine/types";
+import type { Confidence, QualitativeAnalysis, SeasonResult } from "../../engine/types";
 import { groupReasons } from "./groupReasons";
 
 export interface BreakdownPanelProps {
@@ -105,12 +105,6 @@ const showAllButtonStyle: React.CSSProperties = {
   textAlign: "left",
 };
 
-const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
-  High: "var(--color-sim-good)",
-  Medium: "var(--color-sim-warning)",
-  Low: "var(--color-sim-risk)",
-};
-
 function deltaBadgeStyle(delta: number): React.CSSProperties {
   return {
     fontFamily: "var(--font-mono)",
@@ -118,20 +112,6 @@ function deltaBadgeStyle(delta: number): React.CSSProperties {
     fontWeight: 500,
     color: delta < 0 ? "var(--color-sim-risk)" : "var(--color-sim-good)",
     minWidth: "40px",
-  };
-}
-
-function confidenceBadgeStyle(color: string): React.CSSProperties {
-  return {
-    display: "inline-block",
-    fontFamily: "var(--font-sans)",
-    fontWeight: 500,
-    fontSize: "14px",
-    color,
-    background: `color-mix(in srgb, ${color} 18%, var(--color-bg))`,
-    borderRadius: "var(--radius-pill)",
-    padding: "4px 14px",
-    marginBottom: "8px",
   };
 }
 
@@ -185,8 +165,9 @@ export default function BreakdownPanel({ qualitativeAnalysis, seasons, confidenc
           <hr style={dividerStyle} />
 
           <div>
+            {/* The confidence badge itself now lives up in RotationLane's
+                score row (always visible); this just lists the reasons. */}
             <h3 style={sectionHeadingStyle}>Confidence</h3>
-            <span style={confidenceBadgeStyle(CONFIDENCE_COLORS[confidence.level])}>{confidence.level}</span>
             <ul style={listStyle}>
               {confidence.reasons.map((reason) => (
                 <li key={reason}>{reason}</li>

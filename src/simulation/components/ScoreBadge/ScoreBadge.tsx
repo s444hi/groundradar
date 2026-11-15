@@ -2,7 +2,8 @@ import { scoreColor } from "../RotationLane/scoreColor";
 
 export interface ScoreBadgeProps {
   label: string;
-  value: number;
+  // null renders "–" — used while the growth playback hasn't finished yet.
+  value: number | null;
   size: "large" | "small";
   colorByScore?: boolean;
 }
@@ -50,12 +51,13 @@ const smallLabelStyle: React.CSSProperties = {
 
 export default function ScoreBadge({ label, value, size, colorByScore = false }: ScoreBadgeProps) {
   const baseNumeralStyle = size === "large" ? largeNumeralStyle : smallNumeralStyle;
-  const numeralStyle = colorByScore ? { ...baseNumeralStyle, color: scoreColor(value) } : baseNumeralStyle;
+  const numeralStyle =
+    colorByScore && value !== null ? { ...baseNumeralStyle, color: scoreColor(value) } : baseNumeralStyle;
   const labelStyle = size === "large" ? largeLabelStyle : smallLabelStyle;
 
   return (
     <div style={wrapStyle}>
-      <p style={numeralStyle}>{Math.round(value)}%</p>
+      <p style={numeralStyle}>{value === null ? "–" : `${Math.round(value)}%`}</p>
       <p style={labelStyle}>{label}</p>
     </div>
   );

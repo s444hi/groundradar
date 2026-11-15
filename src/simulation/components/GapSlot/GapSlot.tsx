@@ -6,6 +6,7 @@ export interface GapSlotProps {
   startAbsoluteWeek: number;
   endAbsoluteWeek: number;
   widthPercent: number;
+  currentWeek: number;
 }
 
 const containerStyle: React.CSSProperties = {
@@ -33,13 +34,14 @@ const labelStyle: React.CSSProperties = {
 
 // Bare soil is just empty ground — Timeline's shared ground line and dirt
 // specks already show through underneath; this only adds the conditional
-// label.
-export default function GapSlot({ weekCount, startAbsoluteWeek, endAbsoluteWeek, widthPercent }: GapSlotProps) {
+// label, and keeps it hidden until the playhead actually reaches this
+// stretch, consistent with the rest of the timeline revealing progressively.
+export default function GapSlot({ weekCount, startAbsoluteWeek, endAbsoluteWeek, widthPercent, currentWeek }: GapSlotProps) {
   const startMonth = weekToMonthName((startAbsoluteWeek % 52) + 1);
   const endMonth = weekToMonthName((endAbsoluteWeek % 52) + 1);
   const monthLabel = startMonth === endMonth ? startMonth : `${startMonth}–${endMonth}`;
   const tooltip = `Bare soil — ${weekCount} wks · ${monthLabel}`;
-  const showLabel = widthPercent >= BARE_LABEL_THRESHOLD_PERCENT;
+  const showLabel = widthPercent >= BARE_LABEL_THRESHOLD_PERCENT && currentWeek >= startAbsoluteWeek;
 
   return (
     <div style={{ ...containerStyle, width: `${widthPercent}%` }} title={tooltip}>
