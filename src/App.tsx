@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import SimulationPage from './simulation/components/SimulationPage/SimulationPage';
 import './styles/theme.css';
 import { AuthGate } from './components/AuthGate';
 import { FieldTracerMap, type TracedFieldData } from './components/FieldTracerMap';
@@ -16,7 +17,6 @@ import {
   saveFieldAnalysisToSupabase,
   type SavedAnalysisRecord,
 } from './services/supabaseService';
-import SimulationPage from './simulation/components/SimulationPage/SimulationPage';
 
 export function App() {
   const [tracedField, setTracedField] = useState<TracedFieldData | null>(null);
@@ -132,14 +132,40 @@ export function App() {
             </span>
           </header>
 
-          {/* View 3: The interactive simulation, scored from the full analysis */}
-          {simulationPayload && analysisResult ? (
-            <SimulationPage
-              analysis={analysisResult}
-              selectedStrategyId={simulationPayload.selected_strategy.id}
-              onBackToResults={() => setSimulationPayload(null)}
-              embedded
-            />
+          {/* View 3: Simulation Handoff Screen (Ready to mount teammate's simulation component) */}
+          {simulationPayload ? (
+            <div
+              style={{
+                maxWidth: '1200px',
+                margin: '0 auto',
+                backgroundColor: 'var(--color-bg)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-card)',
+                padding: '28px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '18px',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSimulationPayload(null)}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: 'var(--radius-pill)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-subtle)',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to Crop Plans
+                </button>
+              </div>
+
+              <SimulationPage />
+            </div>
           ) : analysisResult && savedRecord ? (
             /* View 2: Full User-Friendly Results Page + Agronomist Chat + Enter Simulation */
             <ResultsPage

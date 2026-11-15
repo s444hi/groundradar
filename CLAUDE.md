@@ -26,8 +26,6 @@ src/styles/theme.css           shared colors, fonts, radii (CSS variables)
 src/simulation/
   data/crops.json              shared crop list, the only source of crop traits
   fixtures/demo-field.json     teammate's demo field payload
-  fixtures/demo-analysis.json  demo payload in the teammate's analysis shape
-  adapters/fromAnalysis.ts     teammate's GroundRadarAnalysisResult -> field JSON
   engine/                      types, frost, timeline, soil, scoring, simulate, confidence, flags, optimize
   engine/index.ts               runSimulation(fieldJson) - the public entry point for the Results page
   engine/__tests__/

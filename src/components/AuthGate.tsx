@@ -461,7 +461,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
               },
               {
                 step: '03',
-                title: 'Simulate Your Rotation',
+                title: 'Simulate Your 2-Year Rotation',
                 desc: 'Compare 3 tailored crop plans and test water savings, soil health, and harvest resilience.',
               },
             ].map((item) => (
