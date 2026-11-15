@@ -99,6 +99,10 @@ export function findBetterRotation(strategy: RotationStrategy, ctx: OptimizeCont
 
     for (let i = 0; i < current.timeline.length; i++) {
       for (let j = i + 1; j < current.timeline.length; j++) {
+        // Only a same-season swap is ever a real move (a crop's planting
+        // window is tied to its season) — matches the same rule the UI's
+        // drag-to-reorder enforces.
+        if (current.timeline[i].season !== current.timeline[j].season) continue;
         const candidate = withSwappedSlots(current, i, j);
         const candidateScore = scoreStrategy(candidate, ctx);
         if (candidateScore > currentScore) {

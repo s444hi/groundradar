@@ -72,6 +72,19 @@ describe("findBetterRotation", () => {
     expect(result.overallScore).toBeGreaterThan(startingScore);
   });
 
+  it("never swaps a crop into a slot of the wrong season", () => {
+    for (const strategy of [baselineStrategy, soilBuilderStrategy, droughtStrategy]) {
+      const result = findBetterRotation(strategy, ctx);
+      for (const slot of result.strategy.timeline) {
+        for (const cropId of slot.crops) {
+          const crop = crops[cropId];
+          if (!crop || crop.season_type === "any") continue; // fallow
+          expect(crop.season_type).toBe(slot.season);
+        }
+      }
+    }
+  });
+
   it("is deterministic", () => {
     const first = findBetterRotation(baselineStrategy, ctx);
     const second = findBetterRotation(baselineStrategy, ctx);

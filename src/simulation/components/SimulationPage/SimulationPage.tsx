@@ -5,6 +5,7 @@ import cropsJson from "../../data/crops.json";
 import demoFieldJson from "../../fixtures/demo-field.json";
 import { runSimulation } from "../../engine";
 import { getFrostWeeks } from "../../engine/frost";
+import { findBetterRotation } from "../../engine/optimize";
 import { simulateStrategy } from "../../engine/simulate";
 import { buildTimeline } from "../../engine/timeline";
 import type { CropId, CropsById, FieldJson, Priorities, RotationSlot } from "../../engine/types";
@@ -26,9 +27,12 @@ import RotationLane from "../RotationLane/RotationLane";
 import type { DragSwapData } from "../Timeline/useDragSwap";
 import { usePlayback } from "../Timeline/usePlayback";
 import Toolbar from "../Toolbar/Toolbar";
-import type { ScoredRotationStrategy } from "../types";
+import type { OptimizerSuggestion, ScoredRotationStrategy } from "../types";
+import { describeChanges } from "./describeChanges";
 import { swapAlternateCrop, swapTemplateSlots } from "./timelineEdits";
 import { useFlipReorder } from "./useFlipReorder";
+
+const MIN_SUGGESTION_IMPROVEMENT = 1;
 
 const crops = cropsJson.crops as unknown as CropsById;
 const originalDemoField = demoFieldJson as unknown as FieldJson;
@@ -40,6 +44,13 @@ const pageStyle: React.CSSProperties = {
   background: "var(--color-bg)",
   color: "var(--color-text)",
   fontFamily: "var(--font-sans)",
+};
+
+const noImprovementStyle: React.CSSProperties = {
+  fontFamily: "var(--font-sans)",
+  fontSize: "13px",
+  color: "var(--color-text-muted)",
+  margin: "0 0 20px 0",
 };
 
 function isSameTimeline(a: RotationSlot[], b: RotationSlot[]): boolean {
@@ -57,6 +68,8 @@ export default function SimulationPage() {
   const [fieldJson, setFieldJson] = useState<FieldJson>(originalDemoField);
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
   const [openGap, setOpenGap] = useState<OpenGap | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<number, OptimizerSuggestion>>({});
+  const [optimizerRanWithNoImprovement, setOptimizerRanWithNoImprovement] = useState(false);
   const frostWeeks = useMemo(() => getFrostWeeks(originalDemoField.climate_data.frost_dates), []);
 
   const scoredField = useMemo(() => runSimulation(fieldJson), [fieldJson]);
@@ -79,6 +92,16 @@ export default function SimulationPage() {
         index === strategyIndex ? { ...strategy, timeline: newTimeline } : strategy,
       ),
     }));
+    // Any edit to this lane (drag, alternate swap, reset, cover crop, or
+    // accepting the suggestion itself) invalidates whatever "Find a better
+    // order" suggestion was pending for it — it was computed against the
+    // timeline this just replaced.
+    setSuggestions((prev) => {
+      if (!(strategyIndex in prev)) return prev;
+      const next = { ...prev };
+      delete next[strategyIndex];
+      return next;
+    });
     // An edit shows its result immediately rather than replaying the growth
     // animation from scratch.
     playback.jumpToEnd();
@@ -97,6 +120,10 @@ export default function SimulationPage() {
       ...prev,
       survey_inputs: { ...prev.survey_inputs, priorities: newPriorities },
     }));
+    // Every pending suggestion's before/after scores (and possibly the
+    // move itself) were computed under the old weighting.
+    setSuggestions({});
+    setOptimizerRanWithNoImprovement(false);
     // Same "show the result immediately" behavior as a timeline edit.
     playback.jumpToEnd();
   }
@@ -170,6 +197,59 @@ export default function SimulationPage() {
     applyTimelineChange(strategyIndex, removeCoverCropSlot(timeline, originalTimeline, templateIndex, crops));
   }
 
+  function handleFindBetterOrder() {
+    const nextSuggestions: Record<number, OptimizerSuggestion> = {};
+
+    fieldJson.rotation_strategies.forEach((strategy, strategyIndex) => {
+      const startingScore = strategies[strategyIndex].simulation_scores.overall_success_score ?? 0;
+      const result = findBetterRotation(strategy, {
+        crops,
+        soil: fieldJson.field_profile.soil,
+        pastRotation: fieldJson.survey_inputs.past_rotation,
+        frostDates: fieldJson.climate_data.frost_dates,
+        weeklyClimatology: fieldJson.climate_data.weekly_climatology,
+        slopePercent: fieldJson.field_profile.slope_percent,
+        priorities: fieldJson.survey_inputs.priorities,
+        mode: fieldJson.field_profile.mode,
+      });
+
+      if (!result.improved || result.overallScore - startingScore < MIN_SUGGESTION_IMPROVEMENT) return;
+
+      const changedTemplateIndices = new Set<number>();
+      for (let i = 0; i < strategy.timeline.length; i++) {
+        if (JSON.stringify(strategy.timeline[i].crops) !== JSON.stringify(result.strategy.timeline[i].crops)) {
+          changedTemplateIndices.add(i);
+        }
+      }
+
+      nextSuggestions[strategyIndex] = {
+        newTimeline: result.strategy.timeline,
+        beforeScore: startingScore,
+        afterScore: result.overallScore,
+        changes: describeChanges(strategy.timeline, result.strategy.timeline, crops),
+        changedTemplateIndices,
+        proposedTimeline: buildTimeline({ ...strategy, timeline: result.strategy.timeline }, crops, frostWeeks, 3),
+      };
+    });
+
+    setSuggestions(nextSuggestions);
+    setOptimizerRanWithNoImprovement(Object.keys(nextSuggestions).length === 0);
+  }
+
+  function handleAcceptSuggestion(strategyIndex: number) {
+    const suggestion = suggestions[strategyIndex];
+    if (!suggestion) return;
+    applyTimelineChange(strategyIndex, suggestion.newTimeline);
+  }
+
+  function handleDismissSuggestion(strategyIndex: number) {
+    setSuggestions((prev) => {
+      const next = { ...prev };
+      delete next[strategyIndex];
+      return next;
+    });
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return; // dropping on bare soil (not droppable) or nowhere also lands here as `over: undefined`
@@ -221,13 +301,20 @@ export default function SimulationPage() {
     <>
       <AppHeader fieldProfile={originalDemoField.field_profile} />
       <div style={pageStyle}>
-        <Toolbar prioritiesOpen={prioritiesOpen} onTogglePriorities={() => setPrioritiesOpen((open) => !open)} />
+        <Toolbar
+          prioritiesOpen={prioritiesOpen}
+          onTogglePriorities={() => setPrioritiesOpen((open) => !open)}
+          onFindBetterOrder={handleFindBetterOrder}
+        />
         {prioritiesOpen && (
           <PrioritySliders
             priorities={fieldJson.survey_inputs.priorities}
             onChange={handlePrioritiesChange}
             onReset={handleResetPriorities}
           />
+        )}
+        {optimizerRanWithNoImprovement && (
+          <p style={noImprovementStyle}>These are already the best orders we can find.</p>
         )}
         <PlaybackControls playback={playback} />
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -254,6 +341,9 @@ export default function SimulationPage() {
               onClosePicker={handleClosePicker}
               onPickCoverCrop={handlePickCoverCrop}
               onRemoveCoverCrop={(templateIndex) => handleRemoveCoverCrop(index, templateIndex)}
+              suggestion={suggestions[index] ?? null}
+              onAcceptSuggestion={() => handleAcceptSuggestion(index)}
+              onDismissSuggestion={() => handleDismissSuggestion(index)}
             />
           ))}
         </DndContext>

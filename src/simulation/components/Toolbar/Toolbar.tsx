@@ -1,6 +1,7 @@
 export interface ToolbarProps {
   prioritiesOpen: boolean;
   onTogglePriorities: () => void;
+  onFindBetterOrder: () => void;
 }
 
 const toolbarStyle: React.CSSProperties = {
@@ -74,7 +75,7 @@ const outlinePillActiveStyle: React.CSSProperties = {
   color: "var(--color-olive)",
 };
 
-const filledPillDisabledStyle: React.CSSProperties = {
+const filledPillStyle: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
   fontWeight: 500,
   fontSize: "14px",
@@ -83,11 +84,7 @@ const filledPillDisabledStyle: React.CSSProperties = {
   padding: "8px 18px",
   background: "var(--color-olive)",
   color: "var(--color-text-on-dark)",
-  opacity: 0.45,
-  cursor: "not-allowed",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
+  cursor: "pointer",
 };
 
 const soonChipStyle: React.CSSProperties = {
@@ -102,12 +99,12 @@ const soonChipStyle: React.CSSProperties = {
 };
 
 /**
- * Only "Rotation" and "Priorities" are live today. Plant mode and the
- * optimizer are real `disabled` buttons (correct semantics) with an
- * always-visible "Soon" chip, so they read as clearly not-yet-wired rather
+ * Only "Rotation", "Priorities", and "Find a better order" are live today.
+ * Plant mode is a real `disabled` button (correct semantics) with an
+ * always-visible "Soon" chip, so it reads as clearly not-yet-wired rather
  * than looking broken.
  */
-export default function Toolbar({ prioritiesOpen, onTogglePriorities }: ToolbarProps) {
+export default function Toolbar({ prioritiesOpen, onTogglePriorities, onFindBetterOrder }: ToolbarProps) {
   return (
     <div style={toolbarStyle}>
       <div style={modeTabsStyle}>
@@ -124,8 +121,8 @@ export default function Toolbar({ prioritiesOpen, onTogglePriorities }: ToolbarP
         >
           Priorities
         </button>
-        <button style={filledPillDisabledStyle} disabled title="Coming soon">
-          Find a better order <span style={soonChipStyle}>Soon</span>
+        <button style={filledPillStyle} onClick={onFindBetterOrder}>
+          Find a better order
         </button>
       </div>
     </div>

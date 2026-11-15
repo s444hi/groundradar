@@ -3,12 +3,13 @@ import BreakdownPanel from "../BreakdownPanel/BreakdownPanel";
 import { CONFIDENCE_COLORS } from "../confidenceColor";
 import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicker";
 import type { GapInfo } from "../CoverCropPicker/coverCropEdits";
+import OptimizerSuggestionCard from "../OptimizerSuggestionCard/OptimizerSuggestionCard";
 import ScoreBadge from "../ScoreBadge/ScoreBadge";
 import Timeline from "../Timeline/Timeline";
 import type { PlaybackApi } from "../Timeline/usePlayback";
 import { useCountUp } from "./useCountUp";
 import type { CropId, CropsById, WeeklyTimeline } from "../../engine/types";
-import type { ScoredRotationStrategy } from "../types";
+import type { OptimizerSuggestion, ScoredRotationStrategy } from "../types";
 
 export interface RotationLaneProps {
   strategy: ScoredRotationStrategy;
@@ -27,6 +28,9 @@ export interface RotationLaneProps {
   onClosePicker: () => void;
   onPickCoverCrop: (cropId: CropId) => void;
   onRemoveCoverCrop: (templateIndex: number) => void;
+  suggestion: OptimizerSuggestion | null;
+  onAcceptSuggestion: () => void;
+  onDismissSuggestion: () => void;
 }
 
 const SCORE_COUNT_UP_MS = 600;
@@ -175,6 +179,9 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
     onClosePicker,
     onPickCoverCrop,
     onRemoveCoverCrop,
+    suggestion,
+    onAcceptSuggestion,
+    onDismissSuggestion,
   },
   ref,
 ) {
@@ -227,6 +234,20 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
             Reset
           </button>
         </div>
+      )}
+
+      {suggestion && (
+        <OptimizerSuggestionCard
+          changes={suggestion.changes}
+          beforeScore={suggestion.beforeScore}
+          afterScore={suggestion.afterScore}
+          proposedTimeline={suggestion.proposedTimeline}
+          templateLength={templateLength}
+          changedTemplateIndices={suggestion.changedTemplateIndices}
+          crops={crops}
+          onAccept={onAcceptSuggestion}
+          onDismiss={onDismissSuggestion}
+        />
       )}
 
       <div style={scoreRowStyle}>
