@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import SimulationPage from './simulation/components/SimulationPage/SimulationPage';
 import './styles/theme.css';
 import { AuthGate } from './components/AuthGate';
