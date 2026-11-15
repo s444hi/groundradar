@@ -72,11 +72,11 @@ function withCoverCropInserted(strategy: RotationStrategy, slotIndex: number, cr
   return { ...strategy, timeline };
 }
 
-function isBareSlot(slot: RotationSlot, crops: CropsById): boolean {
+export function isBareSlot(slot: RotationSlot, crops: CropsById): boolean {
   return slot.crops.every((id) => !crops[id] || !crops[id].planting_window);
 }
 
-function candidateCoverCrops(crops: CropsById, mode: FarmMode): CropId[] {
+export function candidateCoverCrops(crops: CropsById, mode: FarmMode): CropId[] {
   return Object.entries(crops)
     .filter(([, crop]) => crop.is_cover_crop && crop.fits.includes(mode))
     .map(([id]) => id);

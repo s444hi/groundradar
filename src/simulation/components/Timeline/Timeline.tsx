@@ -1,7 +1,10 @@
+import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicker";
+import { ADDED_COVER_CROP_PURPOSE } from "../CoverCropPicker/coverCropEdits";
+import type { GapInfo } from "../CoverCropPicker/coverCropEdits";
 import CropCard from "../CropCard/CropCard";
 import GapSlot from "../GapSlot/GapSlot";
 import { weekToMonthName } from "../../engine/frost";
-import type { CropsById, WeeklyTimeline } from "../../engine/types";
+import type { CropId, CropsById, WeeklyTimeline } from "../../engine/types";
 import { groupWeeksIntoSegments } from "./groupWeeksIntoSegments";
 import {
   BELOW_GROUND_HEIGHT,
@@ -22,6 +25,12 @@ export interface TimelineProps {
   strategyIndex: number;
   templateLength: number;
   onSwapAlternate: (templateIndex: number) => void;
+  openGapKey: string | null;
+  pickerOptions: CoverCropOptionWithDelta[];
+  onToggleGap: (gapKey: string, templateIndex: number, gapInfo: GapInfo) => void;
+  onClosePicker: () => void;
+  onPickCoverCrop: (cropId: CropId) => void;
+  onRemoveCoverCrop: (templateIndex: number) => void;
 }
 
 const outerStyle: React.CSSProperties = {
@@ -153,6 +162,12 @@ export default function Timeline({
   strategyIndex,
   templateLength,
   onSwapAlternate,
+  openGapKey,
+  pickerOptions,
+  onToggleGap,
+  onClosePicker,
+  onPickCoverCrop,
+  onRemoveCoverCrop,
 }: TimelineProps) {
   const totalWeeks = weeklyTimeline.years * 52;
   const segments = groupWeeksIntoSegments(weeklyTimeline);
@@ -205,6 +220,8 @@ export default function Timeline({
             const expandedSlot = weeklyTimeline.slots.find((slot) => slot.slotIndex === expandedSlotIndex);
             const alternateIds = expandedSlot?.alternate_crop_ids ?? [];
 
+            const gapKey = `${strategyIndex}:${expandedSlotIndex}`;
+
             return segment.isBare ? (
               <GapSlot
                 key={segment.startAbsoluteWeek}
@@ -213,6 +230,18 @@ export default function Timeline({
                 endAbsoluteWeek={segment.endAbsoluteWeek}
                 widthPercent={widths[index]}
                 currentWeek={playback.currentWeek}
+                crops={crops}
+                isPickerOpen={openGapKey === gapKey}
+                pickerOptions={pickerOptions}
+                onTogglePicker={() =>
+                  onToggleGap(gapKey, templateIndex, {
+                    startAbsoluteWeek: segment.startAbsoluteWeek,
+                    endAbsoluteWeek: segment.endAbsoluteWeek,
+                    yearOffset: segment.yearOffset,
+                  })
+                }
+                onClosePicker={onClosePicker}
+                onPickCoverCrop={onPickCoverCrop}
               />
             ) : (
               <CropCard
@@ -228,6 +257,8 @@ export default function Timeline({
                 season={expandedSlot?.season ?? "warm_season"}
                 alternateIds={alternateIds}
                 onSwapAlternate={() => onSwapAlternate(templateIndex)}
+                isAddedCoverCrop={expandedSlot?.purpose === ADDED_COVER_CROP_PURPOSE}
+                onRemoveCoverCrop={() => onRemoveCoverCrop(templateIndex)}
               />
             );
           })}

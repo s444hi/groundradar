@@ -5,10 +5,21 @@ import cropsJson from "../../data/crops.json";
 import demoFieldJson from "../../fixtures/demo-field.json";
 import { runSimulation } from "../../engine";
 import { getFrostWeeks } from "../../engine/frost";
+import { simulateStrategy } from "../../engine/simulate";
 import { buildTimeline } from "../../engine/timeline";
-import type { CropsById, FieldJson, Priorities, RotationSlot } from "../../engine/types";
+import type { CropId, CropsById, FieldJson, Priorities, RotationSlot } from "../../engine/types";
 import AppFooter from "../AppFooter/AppFooter";
 import AppHeader from "../AppHeader/AppHeader";
+import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicker";
+import {
+  coverCropReason,
+  fillFallowSlot,
+  gapOwnsAFallowSlot,
+  getCoverCropOptions,
+  insertCoverCropSlot,
+  removeCoverCropSlot,
+} from "../CoverCropPicker/coverCropEdits";
+import type { GapInfo } from "../CoverCropPicker/coverCropEdits";
 import PlaybackControls from "../PlaybackControls/PlaybackControls";
 import PrioritySliders from "../PrioritySliders/PrioritySliders";
 import RotationLane from "../RotationLane/RotationLane";
@@ -35,9 +46,17 @@ function isSameTimeline(a: RotationSlot[], b: RotationSlot[]): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+interface OpenGap {
+  key: string; // "<strategyIndex>:<expandedSlotIndex>", matching the drag id scheme
+  strategyIndex: number;
+  templateIndex: number;
+  gapInfo: GapInfo;
+}
+
 export default function SimulationPage() {
   const [fieldJson, setFieldJson] = useState<FieldJson>(originalDemoField);
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
+  const [openGap, setOpenGap] = useState<OpenGap | null>(null);
   const frostWeeks = useMemo(() => getFrostWeeks(originalDemoField.climate_data.frost_dates), []);
 
   const scoredField = useMemo(() => runSimulation(fieldJson), [fieldJson]);
@@ -84,6 +103,71 @@ export default function SimulationPage() {
 
   function handleResetPriorities() {
     handlePrioritiesChange(originalDemoField.survey_inputs.priorities);
+  }
+
+  function handleToggleGap(gapKey: string, templateIndex: number, gapInfo: GapInfo) {
+    if (openGap?.key === gapKey) {
+      setOpenGap(null);
+      return;
+    }
+    const strategyIndex = Number(gapKey.split(":")[0]);
+    setOpenGap({ key: gapKey, strategyIndex, templateIndex, gapInfo });
+  }
+
+  function handleClosePicker() {
+    setOpenGap(null);
+  }
+
+  // Computed only for whichever gap is currently open (at most one at a
+  // time): each candidate's predicted overall_success_score change comes
+  // from actually running the engine on a hypothetical edited timeline, not
+  // an estimate.
+  const pickerOptions = useMemo<CoverCropOptionWithDelta[]>(() => {
+    if (!openGap) return [];
+    const strategy = fieldJson.rotation_strategies[openGap.strategyIndex];
+    const candidateIds = getCoverCropOptions(openGap.gapInfo, crops, frostWeeks, fieldJson.field_profile.mode);
+    const currentScore = strategies[openGap.strategyIndex].simulation_scores.overall_success_score ?? 0;
+    const isFallow = gapOwnsAFallowSlot(strategy.timeline, openGap.templateIndex, crops);
+
+    return candidateIds.map((cropId) => {
+      const alternateIds = candidateIds.filter((id) => id !== cropId);
+      const newTimeline = isFallow
+        ? fillFallowSlot(strategy.timeline, openGap.templateIndex, cropId, alternateIds)
+        : insertCoverCropSlot(strategy.timeline, openGap.templateIndex, cropId, alternateIds, crops);
+      const result = simulateStrategy({
+        strategy: { ...strategy, timeline: newTimeline },
+        crops,
+        soil: fieldJson.field_profile.soil,
+        pastRotation: fieldJson.survey_inputs.past_rotation,
+        frostDates: fieldJson.climate_data.frost_dates,
+        weeklyClimatology: fieldJson.climate_data.weekly_climatology,
+        slopePercent: fieldJson.field_profile.slope_percent,
+        priorities: fieldJson.survey_inputs.priorities,
+      });
+      const newScore = result.overall_success_score ?? 0;
+      return { cropId, reason: coverCropReason(crops[cropId]), scoreDelta: newScore - currentScore };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openGap, fieldJson, strategies]);
+
+  function handlePickCoverCrop(cropId: CropId) {
+    if (!openGap) return;
+    const { strategyIndex, templateIndex, gapInfo } = openGap;
+    const timeline = fieldJson.rotation_strategies[strategyIndex].timeline;
+    const candidateIds = getCoverCropOptions(gapInfo, crops, frostWeeks, fieldJson.field_profile.mode);
+    const alternateIds = candidateIds.filter((id) => id !== cropId);
+    const isFallow = gapOwnsAFallowSlot(timeline, templateIndex, crops);
+    const newTimeline = isFallow
+      ? fillFallowSlot(timeline, templateIndex, cropId, alternateIds)
+      : insertCoverCropSlot(timeline, templateIndex, cropId, alternateIds, crops);
+    applyTimelineChange(strategyIndex, newTimeline);
+    setOpenGap(null);
+  }
+
+  function handleRemoveCoverCrop(strategyIndex: number, templateIndex: number) {
+    const timeline = fieldJson.rotation_strategies[strategyIndex].timeline;
+    const originalTimeline = originalDemoField.rotation_strategies[strategyIndex].timeline;
+    applyTimelineChange(strategyIndex, removeCoverCropSlot(timeline, originalTimeline, templateIndex, crops));
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -164,6 +248,12 @@ export default function SimulationPage() {
               isEdited={!isSameTimeline(fieldJson.rotation_strategies[index].timeline, originalDemoField.rotation_strategies[index].timeline)}
               onSwapAlternate={(templateIndex) => handleSwapAlternate(index, templateIndex)}
               onReset={() => handleReset(index)}
+              openGapKey={openGap?.key ?? null}
+              pickerOptions={pickerOptions}
+              onToggleGap={handleToggleGap}
+              onClosePicker={handleClosePicker}
+              onPickCoverCrop={handlePickCoverCrop}
+              onRemoveCoverCrop={(templateIndex) => handleRemoveCoverCrop(index, templateIndex)}
             />
           ))}
         </DndContext>

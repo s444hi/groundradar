@@ -21,6 +21,8 @@ export interface CropCardProps {
   season: Season;
   alternateIds: CropId[];
   onSwapAlternate?: () => void;
+  isAddedCoverCrop: boolean;
+  onRemoveCoverCrop?: () => void;
 }
 
 const containerStyle: React.CSSProperties = {
@@ -66,6 +68,21 @@ const swapButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
+const removeButtonStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 0,
+  right: 0,
+  fontFamily: "var(--font-mono)",
+  fontSize: "9px",
+  lineHeight: 1,
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-pill)",
+  padding: "2px 6px",
+  background: "var(--color-bg)",
+  color: "var(--color-sim-risk)",
+  cursor: "pointer",
+};
+
 // Pops a newly-visible stage up from the ground. Keyed by the caller so a
 // *new* stage mounts fresh (and animates in) while an already-visible one
 // re-rendering every animation frame keeps its instance (and stays settled).
@@ -102,6 +119,8 @@ export default function CropCard({
   season,
   alternateIds,
   onSwapAlternate,
+  isAddedCoverCrop,
+  onRemoveCoverCrop,
 }: CropCardProps) {
   // A mix is co-planted in one shared window (same decision as timeline.ts);
   // the primary crop's category stands in for the whole segment's sprite.
@@ -159,6 +178,19 @@ export default function CropCard({
           }}
         >
           ⇄
+        </button>
+      )}
+      {isAddedCoverCrop && onRemoveCoverCrop && (
+        <button
+          style={removeButtonStyle}
+          title="Remove this cover crop"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemoveCoverCrop();
+          }}
+        >
+          Remove
         </button>
       )}
     </div>

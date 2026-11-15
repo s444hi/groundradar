@@ -190,6 +190,51 @@ describe("buildTimeline", () => {
     expect(result!.weeks.every((w) => w.isBare)).toBe(true);
   });
 
+  it("terminates a cover crop the week before an overlapping next cash crop starts", () => {
+    // Synthetic, compressed frost dates (not the demo field's) chosen
+    // specifically so sorghum_sudangrass's natural 9-week window (ending
+    // week 20) would otherwise run into winter_wheat's week-18 planting.
+    const compressedFrostWeeks: FrostWeeks = { last_spring_frost: 10, first_fall_frost: 25 };
+    const strategy: RotationStrategy = {
+      strategy_id: "overlap_test",
+      title: "Overlap test",
+      is_baseline: true,
+      timeline: [
+        { year: 2026, season: "warm_season", crops: ["sorghum_sudangrass"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2026, season: "cool_season", crops: ["winter_wheat"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+      ],
+      simulation_scores: null,
+      qualitative_analysis: emptyQualitativeAnalysis,
+    };
+
+    const result = buildTimeline(strategy, crops, compressedFrostWeeks, 1);
+    const coverSlot = result.slots.find((s) => s.crops.includes("sorghum_sudangrass"))!;
+    const cashSlot = result.slots.find((s) => s.crops.includes("winter_wheat"))!;
+
+    // Cover crop clipped to the week before the cash crop's planting week.
+    expect(coverSlot.occupiedWeeks[0].startAbsoluteWeek).toBe(12);
+    expect(coverSlot.occupiedWeeks[0].endAbsoluteWeek).toBe(17);
+    // Cash crop is never shortened: its own full natural window is intact.
+    expect(cashSlot.occupiedWeeks[0].startAbsoluteWeek).toBe(18);
+    expect(cashSlot.occupiedWeeks[0].endAbsoluteWeek).toBe(51);
+
+    // No week shows both crops at once.
+    for (let w = 0; w < result.weeks.length; w++) {
+      expect(result.weeks[w].cropIds.includes("sorghum_sudangrass") && result.weeks[w].cropIds.includes("winter_wheat")).toBe(false);
+    }
+  });
+
+  it("does not clip an ordinary crop window when nothing overlaps it", () => {
+    const result = buildTimeline(baselineStrategy, crops, frostWeeks);
+    // bell_pepper: last_spring_frost (11) + offset 2 = planting week 13 ->
+    // startAbsoluteWeek 12; ceil(75/7) = 11 weeks -> endAbsoluteWeek 22.
+    // Re-confirms the clipping pass leaves an ordinary (non-overlapping,
+    // and not even a cover crop) window untouched.
+    for (let w = 12; w <= 22; w++) {
+      expect(result.weeks[w].cropIds).toContain("bell_pepper");
+    }
+  });
+
   it("respects a custom years parameter", () => {
     const result = buildTimeline(baselineStrategy, crops, frostWeeks, 1);
     expect(result.years).toBe(1);

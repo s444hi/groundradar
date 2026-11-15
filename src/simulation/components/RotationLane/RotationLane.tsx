@@ -1,11 +1,13 @@
 import { forwardRef, useState } from "react";
 import BreakdownPanel from "../BreakdownPanel/BreakdownPanel";
 import { CONFIDENCE_COLORS } from "../confidenceColor";
+import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicker";
+import type { GapInfo } from "../CoverCropPicker/coverCropEdits";
 import ScoreBadge from "../ScoreBadge/ScoreBadge";
 import Timeline from "../Timeline/Timeline";
 import type { PlaybackApi } from "../Timeline/usePlayback";
 import { useCountUp } from "./useCountUp";
-import type { CropsById, WeeklyTimeline } from "../../engine/types";
+import type { CropId, CropsById, WeeklyTimeline } from "../../engine/types";
 import type { ScoredRotationStrategy } from "../types";
 
 export interface RotationLaneProps {
@@ -19,12 +21,18 @@ export interface RotationLaneProps {
   isEdited: boolean;
   onSwapAlternate: (templateIndex: number) => void;
   onReset: () => void;
+  openGapKey: string | null;
+  pickerOptions: CoverCropOptionWithDelta[];
+  onToggleGap: (gapKey: string, templateIndex: number, gapInfo: GapInfo) => void;
+  onClosePicker: () => void;
+  onPickCoverCrop: (cropId: CropId) => void;
+  onRemoveCoverCrop: (templateIndex: number) => void;
 }
 
 const SCORE_COUNT_UP_MS = 600;
 
 // Off by default: a reminder, for internal reference only, of what this
-// view still doesn't implement (the cover-crop picker, DinoRunner/play).
+// view still doesn't implement (DinoRunner's own obstacle-course replay).
 const SHOW_SCOPE_NOTE = false;
 
 function laneStyle(isTopRanked: boolean): React.CSSProperties {
@@ -161,6 +169,12 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
     isEdited,
     onSwapAlternate,
     onReset,
+    openGapKey,
+    pickerOptions,
+    onToggleGap,
+    onClosePicker,
+    onPickCoverCrop,
+    onRemoveCoverCrop,
   },
   ref,
 ) {
@@ -203,9 +217,7 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
       </div>
       <h2 style={laneTitleStyle}>{strategy.title}</h2>
       {SHOW_SCOPE_NOTE && (
-        <p style={scopeNoteStyle}>
-          Static preview — the cover-crop picker and the play button/DinoRunner are not implemented in this view.
-        </p>
+        <p style={scopeNoteStyle}>Static preview — DinoRunner's own obstacle-course replay is not implemented in this view.</p>
       )}
 
       {isEdited && (
@@ -239,6 +251,12 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
         strategyIndex={strategyIndex}
         templateLength={templateLength}
         onSwapAlternate={onSwapAlternate}
+        openGapKey={openGapKey}
+        pickerOptions={pickerOptions}
+        onToggleGap={onToggleGap}
+        onClosePicker={onClosePicker}
+        onPickCoverCrop={onPickCoverCrop}
+        onRemoveCoverCrop={onRemoveCoverCrop}
       />
 
       {breakdownExpanded ? (
