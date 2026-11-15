@@ -173,9 +173,20 @@ export interface WeatherEvent {
   type: WeatherEventType;
 }
 
+export type ScoreCategory = "season_fit" | "water" | "nitrogen" | "pests" | "erosion" | "income";
+
 export interface ScoreReason {
   delta: number;
   text: string;
+  category?: ScoreCategory;
+  // The one number that changes year to year for this reason (nitrogen:
+  // current soil nitrogen; pests: current pest pressure), so the UI can
+  // collapse a changing-number sequence into one trend line instead of
+  // repeating near-duplicate lines.
+  trendValue?: number;
+  // Ready-made subject for a trend line (crop display name or a family's
+  // common name) — avoids the UI having to regex-parse prose text.
+  subjectLabel?: string;
 }
 
 export interface SeasonSubscores {
@@ -227,6 +238,7 @@ export interface FieldProfile {
   field_id: string;
   mode: FarmMode;
   location: Location;
+  location_name?: string; // human-readable label (e.g. "Folsom, CA"); fall back to location when absent
   area_acres: number;
   elevation_m: number;
   slope_percent: number;

@@ -1,3 +1,4 @@
+import { FAMILY_LABELS } from "./familyLabels";
 import type {
   Crop,
   CropId,
@@ -66,7 +67,7 @@ function climatologyForWeek(
 // window comes from the first crop's planting_window + days_to_maturity,
 // expressed as wrapped calendar weeks (1-52) since scoring works one
 // season at a time against the repeating annual climatology.
-function getSlotCalendarWeeks(cropIds: CropId[], crops: CropsById, frostWeeks: FrostWeeks): number[] {
+export function getSlotCalendarWeeks(cropIds: CropId[], crops: CropsById, frostWeeks: FrostWeeks): number[] {
   const primary = crops[cropIds[0]];
   if (!primary || !primary.planting_window || primary.days_to_maturity == null) return [];
 
@@ -82,7 +83,7 @@ function getSlotCalendarWeeks(cropIds: CropId[], crops: CropsById, frostWeeks: F
 
 // The whole season's calendar weeks, independent of what's planted, so a
 // bare/fallow slot is still scored against the full window.
-function getSeasonCalendarWeeks(season: Season, frostWeeks: FrostWeeks): number[] {
+export function getSeasonCalendarWeeks(season: Season, frostWeeks: FrostWeeks): number[] {
   const spring = frostWeeks.last_spring_frost;
   const fall = frostWeeks.first_fall_frost;
   const weeks: number[] = [];
@@ -112,6 +113,7 @@ function scoreSeasonFit(
       reasons.push({
         delta: -30,
         text: `${crop.display_name} is not frost tolerant but is planted during the cool season, risking frost damage.`,
+        category: "season_fit",
       });
     }
     if (crop.planting_window.end_week_offset < crop.planting_window.start_week_offset) {
@@ -119,6 +121,7 @@ function scoreSeasonFit(
       reasons.push({
         delta: -20,
         text: `${crop.display_name}'s planting window end offset falls before its start offset.`,
+        category: "season_fit",
       });
     }
   }
@@ -127,6 +130,7 @@ function scoreSeasonFit(
     reasons.push({
       delta: 0,
       text: "All planted crops fit their planting window and frost tolerance requirements this season.",
+      category: "season_fit",
     });
   }
   return { score: clamp(score, 0, 100), reasons };
@@ -140,7 +144,10 @@ function scoreWater(
 ): { score: number; reasons: ScoreReason[] } {
   const livingCrops = getLivingCrops(cropIds, crops);
   if (livingCrops.length === 0 || slotWeeks.length === 0) {
-    return { score: 100, reasons: [{ delta: 0, text: "No crop planted this season, so no irrigation need." }] };
+    return {
+      score: 100,
+      reasons: [{ delta: 0, text: "No crop planted this season, so no irrigation need.", category: "water" }],
+    };
   }
 
   const entries = slotWeeks
@@ -163,6 +170,7 @@ function scoreWater(
         {
           delta: -penalty,
           text: `${names} need${livingCrops.length > 1 ? "" : "s"} ${neediest.water_need} water but seasonal rainfall and soil moisture averaged only ${supply.toFixed(1)}, a likely shortfall requiring irrigation (estimate).`,
+          category: "water",
         },
       ],
     };
@@ -170,7 +178,11 @@ function scoreWater(
   return {
     score: 100,
     reasons: [
-      { delta: 0, text: `Seasonal rainfall and soil moisture comfortably cover ${names}'s ${neediest.water_need} water need.` },
+      {
+        delta: 0,
+        text: `Seasonal rainfall and soil moisture comfortably cover ${names}'s ${neediest.water_need} water need.`,
+        category: "water",
+      },
     ],
   };
 }
@@ -182,7 +194,10 @@ function scoreNitrogen(
 ): { score: number; reasons: ScoreReason[] } {
   const livingCrops = getLivingCrops(cropIds, crops);
   if (livingCrops.length === 0) {
-    return { score: 100, reasons: [{ delta: 0, text: "No crop planted this season; nitrogen levels are unaffected." }] };
+    return {
+      score: 100,
+      reasons: [{ delta: 0, text: "No crop planted this season; nitrogen levels are unaffected.", category: "nitrogen" }],
+    };
   }
 
   const reasons: ScoreReason[] = [];
@@ -196,12 +211,16 @@ function scoreNitrogen(
       reasons.push({
         delta: cropScore - 100,
         text: `${crop.display_name} (${crop.nutrient_role.replace("_", " ")}) is scored against the current soil nitrogen level (${soilBeforeSeason.nitrogen.toFixed(0)}/100), landing at ${cropScore.toFixed(0)}.`,
+        category: "nitrogen",
+        trendValue: soilBeforeSeason.nitrogen,
+        subjectLabel: crop.display_name,
       });
     }
     if (crop.nutrient_role === "nitrogen_fixer") {
       reasons.push({
         delta: 0,
         text: `${crop.display_name} also fixes its own nitrogen, replenishing soil nitrogen for future seasons.`,
+        category: "nitrogen",
       });
     }
   }
@@ -211,6 +230,7 @@ function scoreNitrogen(
     reasons.push({
       delta: 0,
       text: `Soil nitrogen (${soilBeforeSeason.nitrogen.toFixed(0)}/100) has no scoring effect on this season's crop(s).`,
+      category: "nitrogen",
     });
   }
   return { score, reasons };
@@ -231,16 +251,24 @@ function scorePests(
   const reasons: ScoreReason[] = [];
 
   for (const family of families) {
+    const familyLabel = FAMILY_LABELS[family];
     const pressure = soilBeforeSeason.pestPressureByFamily[family] ?? 0;
     const penalty = (pressure / 100) * 50;
     if (penalty > 0) {
       score -= penalty;
       reasons.push({
         delta: -penalty,
-        text: `${family} pest pressure carried over from recent rotations (${pressure.toFixed(0)}/100) reduced this season's pest-break score.`,
+        text: `${familyLabel} pest pressure carried over from recent rotations (${pressure.toFixed(0)}/100) reduced this season's pest-break score.`,
+        category: "pests",
+        trendValue: pressure,
+        subjectLabel: familyLabel,
       });
     } else {
-      reasons.push({ delta: 0, text: `No carryover pest pressure detected for ${family} this season.` });
+      reasons.push({
+        delta: 0,
+        text: `No carryover pest pressure detected for ${familyLabel} this season.`,
+        category: "pests",
+      });
     }
   }
 
@@ -248,6 +276,7 @@ function scorePests(
     reasons.push({
       delta: 0,
       text: "No cash crop planted this season (fallow or cover crop only), so there is no pest exposure to score.",
+      category: "pests",
     });
   }
   return { score: clamp(score, 0, 100), reasons };
@@ -295,16 +324,18 @@ function scoreErosion(
     reasons.push({
       delta: score - 100,
       text: `${bareWeekCount} bare or lightly-covered week(s) this season on a ${slopePercent}% slope raised erosion risk.`,
+      category: "erosion",
     });
   }
   if (protectedWeekCount > 0) {
     reasons.push({
       delta: 0,
       text: `${protectedWeekCount} week(s) this season were covered by root/canopy protection, limiting erosion risk.`,
+      category: "erosion",
     });
   }
   if (reasons.length === 0) {
-    reasons.push({ delta: 0, text: "No erosion risk factors detected this season." });
+    reasons.push({ delta: 0, text: "No erosion risk factors detected this season.", category: "erosion" });
   }
   return { score, reasons };
 }
@@ -325,6 +356,7 @@ function scoreIncome(cropIds: CropId[], crops: CropsById): { score: number; reas
         {
           delta: 0,
           text: "No cash crop planted this season (fallow or cover crop only); this season is excluded from the income average.",
+          category: "income",
         },
       ],
     };
@@ -335,7 +367,13 @@ function scoreIncome(cropIds: CropId[], crops: CropsById): { score: number; reas
   const names = cashCrops.map((c) => c.display_name).join(" + ");
   return {
     score,
-    reasons: [{ delta: score - 100, text: `${names} income potential sets this season's income score to ${score.toFixed(0)}.` }],
+    reasons: [
+      {
+        delta: score - 100,
+        text: `${names} income potential sets this season's income score to ${score.toFixed(0)}.`,
+        category: "income",
+      },
+    ],
   };
 }
 
