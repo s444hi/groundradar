@@ -14,17 +14,32 @@ export function useCountUp(targets: number[], durationMs: number, trigger: boole
     targetsRef.current = targets;
   });
 
+  // An edit re-scores while `trigger` (playback.isFinished) is already true,
+  // so targets can change without `trigger` ever flipping false->true again.
+  // Keying the restart on the targets themselves (not just `trigger`) is what
+  // makes the badge pick up the new value at all; whether a *previously
+  // true* trigger counts as "already running" (edit: jump straight to the
+  // new value) vs "just finished" (first reveal: animate) is tracked below.
+  const wasTriggeredRef = useRef(false);
+  const targetsKey = targets.join(",");
+
   const [values, setValues] = useState<(number | null)[]>(() =>
     trigger ? targets : targets.map(() => null),
   );
 
   useEffect(() => {
     if (!trigger) {
+      wasTriggeredRef.current = false;
       setValues(targetsRef.current.map(() => null));
       return;
     }
 
-    if (prefersReducedMotion) {
+    const isFreshFinish = !wasTriggeredRef.current;
+    wasTriggeredRef.current = true;
+
+    if (prefersReducedMotion || !isFreshFinish) {
+      // Reduced motion, or the targets changed from an edit while already
+      // finished: show the new value immediately, no animation.
       setValues(targetsRef.current);
       return;
     }
@@ -41,7 +56,7 @@ export function useCountUp(targets: number[], durationMs: number, trigger: boole
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [trigger, prefersReducedMotion, durationMs]);
+  }, [trigger, prefersReducedMotion, durationMs, targetsKey]);
 
   return values;
 }

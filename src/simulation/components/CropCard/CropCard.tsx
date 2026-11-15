@@ -6,6 +6,7 @@ import { weekToMonthName } from "../../engine/frost";
 import { getVisibleStages } from "../Timeline/getVisibleStages";
 import type { GrowthStageKey } from "../Timeline/getVisibleStages";
 import { LABEL_THRESHOLD_PERCENT, PIXEL_SIZE, spriteBottomOffset, TRACK_HEIGHT } from "../Timeline/layout";
+import { useDragSwap } from "../Timeline/useDragSwap";
 import type { CropId, CropsById } from "../../engine/types";
 
 export interface CropCardProps {
@@ -16,6 +17,9 @@ export interface CropCardProps {
   endAbsoluteWeek: number;
   widthPercent: number;
   currentWeek: number;
+  dragDropId: string;
+  alternateIds: CropId[];
+  onSwapAlternate?: () => void;
 }
 
 const containerStyle: React.CSSProperties = {
@@ -23,6 +27,10 @@ const containerStyle: React.CSSProperties = {
   flexShrink: 0,
   position: "relative",
   height: `${TRACK_HEIGHT}px`,
+  // Without these, a mouse-down-and-drag over the label text starts a
+  // native text selection instead of registering as a dnd-kit drag.
+  userSelect: "none",
+  touchAction: "none",
 };
 
 const labelStyle: React.CSSProperties = {
@@ -39,6 +47,22 @@ const labelStyle: React.CSSProperties = {
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   padding: "0 2px",
+};
+
+const swapButtonStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 0,
+  left: "50%",
+  transform: "translateX(-50%)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "9px",
+  lineHeight: 1,
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-pill)",
+  padding: "2px 6px",
+  background: "var(--color-bg)",
+  color: "var(--color-olive)",
+  cursor: "pointer",
 };
 
 // Pops a newly-visible stage up from the ground. Keyed by the caller so a
@@ -73,6 +97,9 @@ export default function CropCard({
   endAbsoluteWeek,
   widthPercent,
   currentWeek,
+  dragDropId,
+  alternateIds,
+  onSwapAlternate,
 }: CropCardProps) {
   // A mix is co-planted in one shared window (same decision as timeline.ts);
   // the primary crop's category stands in for the whole segment's sprite.
@@ -92,8 +119,19 @@ export default function CropCard({
   const visibleStages = getVisibleStages({ startAbsoluteWeek, weekCount }, widthPercent, currentWeek);
   const showLabel = widthPercent >= LABEL_THRESHOLD_PERCENT && visibleStages.length > 0;
 
+  const drag = useDragSwap(dragDropId);
+
   return (
-    <div style={{ ...containerStyle, width: `${widthPercent}%` }} title={tooltip}>
+    <div
+      ref={drag.setNodeRef}
+      // dnd-kit's `transform` is plain re-render-triggering state, not a
+      // React ref — this flags as a false positive.
+      // eslint-disable-next-line react/refs
+      style={{ ...containerStyle, width: `${widthPercent}%`, ...drag.style }}
+      title={tooltip}
+      {...drag.attributes}
+      {...drag.listeners}
+    >
       {visibleStages.map(({ stageKey, leftPercent }) => (
         <div
           key={stageKey}
@@ -108,6 +146,19 @@ export default function CropCard({
         </div>
       ))}
       {showLabel && <p style={labelStyle}>{names}</p>}
+      {alternateIds.length > 0 && onSwapAlternate && (
+        <button
+          style={swapButtonStyle}
+          title={`Swap for ${alternateIds.map((id) => crops[id]?.display_name ?? id).join(" + ")}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSwapAlternate();
+          }}
+        >
+          ⇄
+        </button>
+      )}
     </div>
   );
 }

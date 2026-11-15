@@ -21,6 +21,9 @@ const largeNumeralStyle: React.CSSProperties = {
   letterSpacing: "-0.02em",
   fontSize: "96px",
   lineHeight: 1,
+  // Fixed height (matches fontSize * lineHeight) so "–" and "78%" occupy the
+  // exact same box — switching between them never shifts "Overall success".
+  height: "96px",
   margin: 0,
   color: "var(--color-text)",
 };

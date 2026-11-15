@@ -19,29 +19,13 @@ export interface TimelineProps {
   crops: CropsById;
   baseYear: number;
   playback: PlaybackApi;
+  strategyIndex: number;
+  templateLength: number;
+  onSwapAlternate: (templateIndex: number) => void;
 }
 
 const outerStyle: React.CSSProperties = {
   marginBottom: "32px",
-};
-
-const controlsRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  marginBottom: "12px",
-};
-
-const controlButtonStyle: React.CSSProperties = {
-  fontFamily: "var(--font-sans)",
-  fontWeight: 500,
-  fontSize: "12px",
-  border: "1px solid var(--color-border)",
-  borderRadius: "var(--radius-pill)",
-  padding: "5px 14px",
-  background: "var(--color-bg)",
-  color: "var(--color-text)",
-  cursor: "pointer",
 };
 
 const yearLabelRowStyle: React.CSSProperties = {
@@ -161,7 +145,15 @@ function DirtSpecks({ totalWeeks }: { totalWeeks: number }) {
   );
 }
 
-export default function Timeline({ weeklyTimeline, crops, baseYear, playback }: TimelineProps) {
+export default function Timeline({
+  weeklyTimeline,
+  crops,
+  baseYear,
+  playback,
+  strategyIndex,
+  templateLength,
+  onSwapAlternate,
+}: TimelineProps) {
   const totalWeeks = weeklyTimeline.years * 52;
   const segments = groupWeeksIntoSegments(weeklyTimeline);
 
@@ -186,15 +178,6 @@ export default function Timeline({ weeklyTimeline, crops, baseYear, playback }: 
 
   return (
     <div style={outerStyle}>
-      <div style={controlsRowStyle}>
-        <button style={controlButtonStyle} onClick={() => (playback.isPlaying ? playback.pause() : playback.play())}>
-          {playback.isPlaying ? "Pause" : "Play"}
-        </button>
-        <button style={controlButtonStyle} onClick={playback.replay}>
-          Replay
-        </button>
-      </div>
-
       <div style={yearLabelRowStyle}>
         {Array.from({ length: weeklyTimeline.years }, (_, yearOffset) => (
           <span
@@ -214,8 +197,16 @@ export default function Timeline({ weeklyTimeline, crops, baseYear, playback }: 
         ))}
 
         <div style={segmentRowStyle}>
-          {segments.map((segment, index) =>
-            segment.isBare ? (
+          {segments.map((segment, index) => {
+            // Our placement never produces a segment spanning more than one
+            // expanded slot in practice; take the first if it ever did.
+            const expandedSlotIndex = segment.slotIndexes[0] ?? 0;
+            const dragDropId = `${strategyIndex}:${expandedSlotIndex}`;
+            const templateIndex = expandedSlotIndex % templateLength;
+            const expandedSlot = weeklyTimeline.slots.find((slot) => slot.slotIndex === expandedSlotIndex);
+            const alternateIds = expandedSlot?.alternate_crop_ids ?? [];
+
+            return segment.isBare ? (
               <GapSlot
                 key={segment.startAbsoluteWeek}
                 weekCount={segment.weekCount}
@@ -223,6 +214,7 @@ export default function Timeline({ weeklyTimeline, crops, baseYear, playback }: 
                 endAbsoluteWeek={segment.endAbsoluteWeek}
                 widthPercent={widths[index]}
                 currentWeek={playback.currentWeek}
+                dragDropId={dragDropId}
               />
             ) : (
               <CropCard
@@ -234,9 +226,12 @@ export default function Timeline({ weeklyTimeline, crops, baseYear, playback }: 
                 endAbsoluteWeek={segment.endAbsoluteWeek}
                 widthPercent={widths[index]}
                 currentWeek={playback.currentWeek}
+                dragDropId={dragDropId}
+                alternateIds={alternateIds}
+                onSwapAlternate={() => onSwapAlternate(templateIndex)}
               />
-            ),
-          )}
+            );
+          })}
         </div>
 
         {!playback.isFinished && (
