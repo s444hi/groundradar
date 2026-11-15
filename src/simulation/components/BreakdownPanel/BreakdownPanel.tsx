@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Confidence, ConfidenceLevel, QualitativeAnalysis, SeasonResult } from "../../engine/types";
 import { groupReasons } from "./groupReasons";
 
@@ -8,15 +9,42 @@ export interface BreakdownPanelProps {
   checkLocally: string[];
 }
 
+type Tab = "overview" | "why" | "checklocally";
+
 const panelStyle: React.CSSProperties = {
   background: "var(--color-bg-subtle)",
   border: "1px solid var(--color-border)",
   borderRadius: "var(--radius-card)",
-  padding: "32px",
+  padding: "28px",
   display: "flex",
   flexDirection: "column",
-  gap: "24px",
+  gap: "20px",
 };
+
+const tabBarStyle: React.CSSProperties = {
+  display: "inline-flex",
+  gap: "2px",
+  background: "var(--color-bg)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-pill)",
+  padding: "4px",
+  alignSelf: "flex-start",
+};
+
+function tabButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    fontFamily: "var(--font-sans)",
+    fontWeight: 500,
+    fontSize: "13px",
+    border: "none",
+    borderRadius: "var(--radius-pill)",
+    padding: "6px 14px",
+    cursor: "pointer",
+    background: active ? "var(--color-olive)" : "transparent",
+    color: active ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
+    transition: "background-color 150ms ease, color 150ms ease",
+  };
+}
 
 const sectionHeadingStyle: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
@@ -64,6 +92,19 @@ const annotationStyle: React.CSSProperties = {
   color: "var(--color-text-muted)",
 };
 
+const showAllButtonStyle: React.CSSProperties = {
+  fontFamily: "var(--font-sans)",
+  fontWeight: 500,
+  fontSize: "13px",
+  color: "var(--color-olive)",
+  background: "none",
+  border: "none",
+  padding: 0,
+  marginTop: "4px",
+  cursor: "pointer",
+  textAlign: "left",
+};
+
 const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
   High: "var(--color-sim-good)",
   Medium: "var(--color-sim-warning)",
@@ -95,69 +136,98 @@ function confidenceBadgeStyle(color: string): React.CSSProperties {
 }
 
 export default function BreakdownPanel({ qualitativeAnalysis, seasons, confidence, checkLocally }: BreakdownPanelProps) {
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [showAll, setShowAll] = useState(false);
+
   const groupedReasons = groupReasons(seasons);
+  // A trend line's delta is its last year's, so a trend whose final year
+  // happens to land at 0 would hide by default even if earlier years
+  // weren't — not an issue for current demo data, but a known limitation.
+  const visibleReasons = showAll ? groupedReasons : groupedReasons.filter((reason) => reason.delta !== 0);
+  const hiddenCount = groupedReasons.length - visibleReasons.length;
 
   return (
     <div style={panelStyle}>
-      <div>
-        <h3 style={sectionHeadingStyle}>Why this strategy</h3>
-        <p style={bodyTextStyle}>{qualitativeAnalysis.why_suggested}</p>
-        <p style={bodyTextStyle}>{qualitativeAnalysis.nasa_evidence}</p>
-        {qualitativeAnalysis.benefits.length > 0 && (
-          <ul style={listStyle}>
-            {qualitativeAnalysis.benefits.map((benefit) => (
-              <li key={benefit}>{benefit}</li>
-            ))}
-          </ul>
-        )}
-        {qualitativeAnalysis.information_gaps.length > 0 && (
-          <ul style={listStyle}>
-            {qualitativeAnalysis.information_gaps.map((gap) => (
-              <li key={gap}>{gap}</li>
-            ))}
-          </ul>
-        )}
+      <div style={tabBarStyle}>
+        <button style={tabButtonStyle(activeTab === "overview")} onClick={() => setActiveTab("overview")}>
+          Overview
+        </button>
+        <button style={tabButtonStyle(activeTab === "why")} onClick={() => setActiveTab("why")}>
+          Why this score
+        </button>
+        <button style={tabButtonStyle(activeTab === "checklocally")} onClick={() => setActiveTab("checklocally")}>
+          Check locally
+        </button>
       </div>
 
-      <hr style={dividerStyle} />
-
-      <div>
-        <h3 style={sectionHeadingStyle}>Why the score is what it is</h3>
-        {groupedReasons.map((reason) => (
-          <div key={reason.text} style={reasonRowStyle}>
-            <span style={deltaBadgeStyle(reason.delta)}>
-              {reason.delta >= 0 ? "+" : ""}
-              {Math.round(reason.delta)}
-            </span>
-            <p style={{ ...bodyTextStyle, margin: 0 }}>
-              {reason.text} {reason.annotation && <span style={annotationStyle}>{reason.annotation}</span>}
-            </p>
+      {activeTab === "overview" && (
+        <>
+          <div>
+            <h3 style={sectionHeadingStyle}>Why this strategy</h3>
+            <p style={bodyTextStyle}>{qualitativeAnalysis.why_suggested}</p>
+            <p style={bodyTextStyle}>{qualitativeAnalysis.nasa_evidence}</p>
+            {qualitativeAnalysis.benefits.length > 0 && (
+              <ul style={listStyle}>
+                {qualitativeAnalysis.benefits.map((benefit) => (
+                  <li key={benefit}>{benefit}</li>
+                ))}
+              </ul>
+            )}
+            {qualitativeAnalysis.information_gaps.length > 0 && (
+              <ul style={listStyle}>
+                {qualitativeAnalysis.information_gaps.map((gap) => (
+                  <li key={gap}>{gap}</li>
+                ))}
+              </ul>
+            )}
           </div>
-        ))}
-      </div>
 
-      <hr style={dividerStyle} />
+          <hr style={dividerStyle} />
 
-      <div>
-        <h3 style={sectionHeadingStyle}>Confidence</h3>
-        <span style={confidenceBadgeStyle(CONFIDENCE_COLORS[confidence.level])}>{confidence.level}</span>
-        <ul style={listStyle}>
-          {confidence.reasons.map((reason) => (
-            <li key={reason}>{reason}</li>
+          <div>
+            <h3 style={sectionHeadingStyle}>Confidence</h3>
+            <span style={confidenceBadgeStyle(CONFIDENCE_COLORS[confidence.level])}>{confidence.level}</span>
+            <ul style={listStyle}>
+              {confidence.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+
+      {activeTab === "why" && (
+        <div>
+          <h3 style={sectionHeadingStyle}>Why the score is what it is</h3>
+          {visibleReasons.map((reason) => (
+            <div key={reason.text} style={reasonRowStyle}>
+              <span style={deltaBadgeStyle(reason.delta)}>
+                {reason.delta >= 0 ? "+" : ""}
+                {Math.round(reason.delta)}
+              </span>
+              <p style={{ ...bodyTextStyle, margin: 0 }}>
+                {reason.text} {reason.annotation && <span style={annotationStyle}>{reason.annotation}</span>}
+              </p>
+            </div>
           ))}
-        </ul>
-      </div>
+          {hiddenCount > 0 && (
+            <button style={showAllButtonStyle} onClick={() => setShowAll(!showAll)}>
+              {showAll ? "Hide zero-impact details" : `Show all details (${hiddenCount} more)`}
+            </button>
+          )}
+        </div>
+      )}
 
-      <hr style={dividerStyle} />
-
-      <div>
-        <h3 style={sectionHeadingStyle}>Check locally</h3>
-        <ul style={listStyle}>
-          {checkLocally.map((flag) => (
-            <li key={flag}>{flag}</li>
-          ))}
-        </ul>
-      </div>
+      {activeTab === "checklocally" && (
+        <div>
+          <h3 style={sectionHeadingStyle}>Check locally</h3>
+          <ul style={listStyle}>
+            {checkLocally.map((flag) => (
+              <li key={flag}>{flag}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

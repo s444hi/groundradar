@@ -1,7 +1,10 @@
+import { scoreColor } from "../RotationLane/scoreColor";
+
 export interface ScoreBadgeProps {
   label: string;
   value: number;
   size: "large" | "small";
+  colorByScore?: boolean;
 }
 
 const wrapStyle: React.CSSProperties = {
@@ -45,8 +48,9 @@ const smallLabelStyle: React.CSSProperties = {
   margin: 0,
 };
 
-export default function ScoreBadge({ label, value, size }: ScoreBadgeProps) {
-  const numeralStyle = size === "large" ? largeNumeralStyle : smallNumeralStyle;
+export default function ScoreBadge({ label, value, size, colorByScore = false }: ScoreBadgeProps) {
+  const baseNumeralStyle = size === "large" ? largeNumeralStyle : smallNumeralStyle;
+  const numeralStyle = colorByScore ? { ...baseNumeralStyle, color: scoreColor(value) } : baseNumeralStyle;
   const labelStyle = size === "large" ? largeLabelStyle : smallLabelStyle;
 
   return (

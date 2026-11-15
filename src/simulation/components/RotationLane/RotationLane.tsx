@@ -19,8 +19,9 @@ const laneStyle: React.CSSProperties = {
   background: "var(--color-cream)",
   border: "2px solid var(--color-olive)",
   borderRadius: "var(--radius-card)",
-  padding: "32px",
+  padding: "28px",
   marginTop: "24px",
+  transition: "transform 180ms ease, box-shadow 180ms ease",
 };
 
 const laneTitleStyle: React.CSSProperties = {
@@ -69,7 +70,17 @@ export default function RotationLane({ strategy, weeklyTimeline, crops }: Rotati
   const baseYear = strategy.timeline[0]?.year ?? 0;
 
   return (
-    <div style={laneStyle}>
+    <div
+      style={laneStyle}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 10px 24px color-mix(in srgb, var(--color-text) 10%, transparent)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    >
       {strategy.is_baseline && <span style={baselineTagStyle}>Baseline</span>}
       <h2 style={laneTitleStyle}>{strategy.title}</h2>
       {SHOW_SCOPE_NOTE && (
@@ -82,11 +93,11 @@ export default function RotationLane({ strategy, weeklyTimeline, crops }: Rotati
       <div style={scoreRowStyle}>
         <ScoreBadge label="Overall success" value={scores.overall_success_score ?? 0} size="large" />
         <div style={smallScoreRowStyle}>
-          <ScoreBadge label="Water" value={scores.water_efficiency_score ?? 0} size="small" />
-          <ScoreBadge label="Erosion" value={scores.erosion_protection_score ?? 0} size="small" />
-          <ScoreBadge label="Pests" value={scores.pest_break_score ?? 0} size="small" />
-          <ScoreBadge label="Season fit" value={scores.season_fit_score ?? 0} size="small" />
-          <ScoreBadge label="Income" value={scores.income_score ?? 0} size="small" />
+          <ScoreBadge label="Water" value={scores.water_efficiency_score ?? 0} size="small" colorByScore />
+          <ScoreBadge label="Erosion" value={scores.erosion_protection_score ?? 0} size="small" colorByScore />
+          <ScoreBadge label="Pests" value={scores.pest_break_score ?? 0} size="small" colorByScore />
+          <ScoreBadge label="Season fit" value={scores.season_fit_score ?? 0} size="small" colorByScore />
+          <ScoreBadge label="Income" value={scores.income_score ?? 0} size="small" colorByScore />
         </div>
       </div>
 

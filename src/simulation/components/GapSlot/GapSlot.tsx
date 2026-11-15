@@ -1,8 +1,10 @@
+import { weekToMonthName } from "../../engine/frost";
+
 export interface GapSlotProps {
   weekCount: number;
   startAbsoluteWeek: number;
   endAbsoluteWeek: number;
-  widthPx: number;
+  widthPercent: number;
 }
 
 const labelPillStyle: React.CSSProperties = {
@@ -27,12 +29,15 @@ const weekLabelStyle: React.CSSProperties = {
   margin: 0,
 };
 
-export default function GapSlot({ weekCount, startAbsoluteWeek, endAbsoluteWeek, widthPx }: GapSlotProps) {
+export default function GapSlot({ weekCount, startAbsoluteWeek, endAbsoluteWeek, widthPercent }: GapSlotProps) {
+  // See CropCard: no per-segment radius/full border — the Timeline track
+  // owns the rounded strip shape; each segment gets a right-edge seam.
   const cardStyle: React.CSSProperties = {
-    width: `${widthPx}px`,
+    width: `${widthPercent}%`,
+    boxSizing: "border-box",
+    flexShrink: 0,
     minHeight: "72px",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-card)",
+    borderRight: "1px solid var(--color-border)",
     background: `repeating-linear-gradient(45deg,
       color-mix(in srgb, var(--color-sim-bare-soil) 55%, transparent) 0 6px,
       color-mix(in srgb, var(--color-sim-bare-soil) 20%, transparent) 6px 12px)`,
@@ -41,15 +46,16 @@ export default function GapSlot({ weekCount, startAbsoluteWeek, endAbsoluteWeek,
     justifyContent: "center",
   };
 
-  const startCalendarWeek = (startAbsoluteWeek % 52) + 1;
-  const endCalendarWeek = (endAbsoluteWeek % 52) + 1;
+  const startMonth = weekToMonthName((startAbsoluteWeek % 52) + 1);
+  const endMonth = weekToMonthName((endAbsoluteWeek % 52) + 1);
+  const monthLabel = startMonth === endMonth ? startMonth : `${startMonth}–${endMonth}`;
 
   return (
     <div style={cardStyle}>
       <div style={labelPillStyle}>
         <p style={textStyle}>Bare soil</p>
         <p style={weekLabelStyle}>
-          {weekCount} wks · Wk {startCalendarWeek}–{endCalendarWeek}
+          {weekCount} wks · {monthLabel}
         </p>
       </div>
     </div>

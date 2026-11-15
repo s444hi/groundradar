@@ -1,3 +1,4 @@
+import { weekToMonthName } from "../../engine/frost";
 import type { CropId, CropsById } from "../../engine/types";
 
 export interface CropCardProps {
@@ -6,7 +7,7 @@ export interface CropCardProps {
   weekCount: number;
   startAbsoluteWeek: number;
   endAbsoluteWeek: number;
-  widthPx: number;
+  widthPercent: number;
 }
 
 const nameStyle: React.CSSProperties = {
@@ -25,13 +26,25 @@ const weekLabelStyle: React.CSSProperties = {
   margin: 0,
 };
 
-export default function CropCard({ cropIds, crops, weekCount, startAbsoluteWeek, endAbsoluteWeek, widthPx }: CropCardProps) {
+export default function CropCard({
+  cropIds,
+  crops,
+  weekCount,
+  startAbsoluteWeek,
+  endAbsoluteWeek,
+  widthPercent,
+}: CropCardProps) {
+  const hasCoverCrop = cropIds.some((id) => crops[id]?.is_cover_crop);
+  // No per-segment radius or full border: the Timeline's outer track owns
+  // the rounded, bordered "strip" shape (overflow:hidden + radius); each
+  // segment just needs a right-edge seam against its neighbor.
   const cardStyle: React.CSSProperties = {
-    width: `${widthPx}px`,
+    width: `${widthPercent}%`,
+    boxSizing: "border-box",
+    flexShrink: 0,
     minHeight: "72px",
-    background: "var(--color-cream)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-card)",
+    background: hasCoverCrop ? "var(--color-sage)" : "var(--color-bg)",
+    borderRight: "1px solid var(--color-border)",
     padding: "8px 12px",
     display: "flex",
     flexDirection: "column",
@@ -40,14 +53,15 @@ export default function CropCard({ cropIds, crops, weekCount, startAbsoluteWeek,
   };
 
   const names = cropIds.map((id) => crops[id]?.display_name ?? id).join(" + ");
-  const startCalendarWeek = (startAbsoluteWeek % 52) + 1;
-  const endCalendarWeek = (endAbsoluteWeek % 52) + 1;
+  const startMonth = weekToMonthName((startAbsoluteWeek % 52) + 1);
+  const endMonth = weekToMonthName((endAbsoluteWeek % 52) + 1);
+  const monthLabel = startMonth === endMonth ? startMonth : `${startMonth}–${endMonth}`;
 
   return (
     <div style={cardStyle}>
       <p style={nameStyle}>{names}</p>
       <p style={weekLabelStyle}>
-        {weekCount} wks · Wk {startCalendarWeek}–{endCalendarWeek}
+        {weekCount} wks · {monthLabel}
       </p>
     </div>
   );
