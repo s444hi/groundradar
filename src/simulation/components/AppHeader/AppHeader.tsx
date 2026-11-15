@@ -2,6 +2,8 @@ import type { FieldProfile } from "../../engine/types";
 
 export interface AppHeaderProps {
   fieldProfile: FieldProfile;
+  /** Wired by the Results page; the standalone demo leaves the button inert. */
+  onBack?: () => void;
 }
 
 const headerStyle: React.CSSProperties = {
@@ -107,7 +109,7 @@ function formatCoordinate(lat: number, lon: number): string {
   return `${latLabel}, ${lonLabel}`;
 }
 
-export default function AppHeader({ fieldProfile }: AppHeaderProps) {
+export default function AppHeader({ fieldProfile, onBack }: AppHeaderProps) {
   const locationLabel =
     fieldProfile.location_name ?? formatCoordinate(fieldProfile.location.latitude, fieldProfile.location.longitude);
 
@@ -123,6 +125,7 @@ export default function AppHeader({ fieldProfile }: AppHeaderProps) {
           </nav>
           <button
             style={backButtonStyle}
+            onClick={onBack}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-olive-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-olive)")}
           >
