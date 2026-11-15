@@ -34,21 +34,3 @@ export function weekToMonthName(calendarWeek: number): string {
   }
   return MONTH_NAMES[monthIndex];
 }
-
-/**
- * Inverse of getFrostWeek: turns a 1-52 week into an "MM-DD" date inside
- * that week, so a payload that only carries frost *weeks* can be fed to the
- * FrostDates contract. Uses the week's midpoint day (same convention as
- * weekToMonthName), which makes getFrostWeek(weekToMonthDay(w)) === w for
- * every week 1-52.
- */
-export function weekToMonthDay(calendarWeek: number): string {
-  const week = Math.min(52, Math.max(1, Math.round(calendarWeek)));
-  const dayOfYear = (week - 1) * 7 + 4;
-  let monthIndex = 0;
-  for (let i = 0; i < 12; i++) {
-    if (dayOfYear > CUMULATIVE_DAYS_BEFORE_MONTH[i]) monthIndex = i;
-  }
-  const dayOfMonth = dayOfYear - CUMULATIVE_DAYS_BEFORE_MONTH[monthIndex];
-  return `${String(monthIndex + 1).padStart(2, "0")}-${String(dayOfMonth).padStart(2, "0")}`;
-}

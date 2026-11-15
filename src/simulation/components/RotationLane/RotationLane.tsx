@@ -20,8 +20,6 @@ export interface RotationLaneProps {
   strategyIndex: number;
   templateLength: number;
   isEdited: boolean;
-  /** Overrides the rank-1 default for whether the breakdown starts open. */
-  startExpanded?: boolean;
   onSwapAlternate: (templateIndex: number) => void;
   onReset: () => void;
   openGapKey: string | null;
@@ -173,7 +171,6 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
     strategyIndex,
     templateLength,
     isEdited,
-    startExpanded,
     onSwapAlternate,
     onReset,
     openGapKey,
@@ -191,10 +188,9 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
   const scores = strategy.simulation_scores;
   const baseYear = strategy.timeline[0]?.year ?? 0;
   const isTopRanked = rank === 1;
-  // "By default" means on first render — a user's manual toggle afterward
-  // should stick even if an edit later changes the rank. The Results page
-  // passes startExpanded so the lane the user picked there opens instead.
-  const [breakdownExpanded, setBreakdownExpanded] = useState(startExpanded ?? isTopRanked);
+  // "By default" means on first render at this rank — a user's manual
+  // toggle afterward should stick even if an edit later changes the rank.
+  const [breakdownExpanded, setBreakdownExpanded] = useState(isTopRanked);
 
   const [overall, water, erosion, pests, seasonFit, income] = useCountUp(
     [

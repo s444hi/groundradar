@@ -1,8 +1,6 @@
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { useMemo, useRef, useState } from "react";
-import { fromAnalysis } from "../../adapters/fromAnalysis";
-import type { AnalysisResult } from "../../adapters/fromAnalysis";
 import cropsJson from "../../data/crops.json";
 import demoFieldJson from "../../fixtures/demo-field.json";
 import { runSimulation } from "../../engine";
@@ -13,7 +11,6 @@ import { buildTimeline } from "../../engine/timeline";
 import type { CropId, CropsById, FieldJson, Priorities, RotationSlot } from "../../engine/types";
 import AppFooter from "../AppFooter/AppFooter";
 import AppHeader from "../AppHeader/AppHeader";
-import Disclaimer from "../Disclaimer/Disclaimer";
 import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicker";
 import {
   coverCropReason,
@@ -31,7 +28,6 @@ import type { DragSwapData } from "../Timeline/useDragSwap";
 import { usePlayback } from "../Timeline/usePlayback";
 import Toolbar from "../Toolbar/Toolbar";
 import type { OptimizerSuggestion, ScoredRotationStrategy } from "../types";
-import { useLocationName } from "../useLocationName";
 import { describeChanges } from "./describeChanges";
 import { swapAlternateCrop, swapTemplateSlots } from "./timelineEdits";
 import { useFlipReorder } from "./useFlipReorder";
@@ -39,38 +35,15 @@ import { useFlipReorder } from "./useFlipReorder";
 const MIN_SUGGESTION_IMPROVEMENT = 1;
 
 const crops = cropsJson.crops as unknown as CropsById;
-const demoField = demoFieldJson as unknown as FieldJson;
+const originalDemoField = demoFieldJson as unknown as FieldJson;
 
-function pageStyle(embedded: boolean): React.CSSProperties {
-  return {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    // Embedded, the Results page supplies the surrounding card and padding.
-    padding: embedded ? "0" : "32px 24px 48px",
-    background: embedded ? "transparent" : "var(--color-bg)",
-    color: "var(--color-text)",
-    fontFamily: "var(--font-sans)",
-  };
-}
-
-const backLinkRowStyle: React.CSSProperties = {
-  margin: "0 0 20px 0",
-};
-
-const backLinkStyle: React.CSSProperties = {
-  fontFamily: "var(--font-sans)",
-  fontWeight: 500,
-  fontSize: "13px",
-  color: "var(--color-olive)",
+const pageStyle: React.CSSProperties = {
+  maxWidth: "1200px",
+  margin: "0 auto",
+  padding: "32px 24px 48px",
   background: "var(--color-bg)",
-  border: "1px solid var(--color-border)",
-  borderRadius: "var(--radius-pill)",
-  padding: "8px 18px",
-  cursor: "pointer",
-};
-
-const embeddedDisclaimerRowStyle: React.CSSProperties = {
-  marginTop: "32px",
+  color: "var(--color-text)",
+  fontFamily: "var(--font-sans)",
 };
 
 const noImprovementStyle: React.CSSProperties = {
@@ -91,58 +64,13 @@ interface OpenGap {
   gapInfo: GapInfo;
 }
 
-export interface SimulationPageProps {
-  /**
-   * The teammate's full analysis payload. Without one the page runs on the
-   * demo fixture, which is how the standalone simulation route works.
-   */
-  analysis?: AnalysisResult | null;
-  /** The strategy the user picked on the Results page; its lane opens expanded. */
-  selectedStrategyId?: string | null;
-  /** Returns to the Results page. Shown in the header, or as a back pill when embedded. */
-  onBackToResults?: () => void;
-  /** Mounted inside the Results page, which already draws its own header and chrome. */
-  embedded?: boolean;
-}
-
-export default function SimulationPage({
-  analysis,
-  selectedStrategyId,
-  onBackToResults,
-  embedded = false,
-}: SimulationPageProps = {}) {
-  // The unedited starting point for this field: every "reset" and "you
-  // changed this rotation" comparison is made against it.
-  const originalField = useMemo(() => (analysis ? fromAnalysis(analysis) : demoField), [analysis]);
-
-  const [fieldJson, setFieldJson] = useState<FieldJson>(originalField);
+export default function SimulationPage() {
+  const [fieldJson, setFieldJson] = useState<FieldJson>(originalDemoField);
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
   const [openGap, setOpenGap] = useState<OpenGap | null>(null);
   const [suggestions, setSuggestions] = useState<Record<number, OptimizerSuggestion>>({});
   const [optimizerRanWithNoImprovement, setOptimizerRanWithNoImprovement] = useState(false);
-  const frostWeeks = useMemo(() => getFrostWeeks(originalField.climate_data.frost_dates), [originalField]);
-
-  // A new analysis means a different field, so every edit, suggestion and
-  // open picker belonging to the old one is dropped. Adjusting state during
-  // render (rather than in an effect) re-renders before anything paints.
-  const loadedFieldRef = useRef(originalField);
-  if (loadedFieldRef.current !== originalField) {
-    loadedFieldRef.current = originalField;
-    setFieldJson(originalField);
-    setSuggestions({});
-    setOpenGap(null);
-    setOptimizerRanWithNoImprovement(false);
-  }
-
-  // Only looked up when the header that shows it is actually rendered.
-  const geocodedLocationName = useLocationName(embedded ? null : originalField.field_profile.location);
-  const headerFieldProfile = useMemo(
-    () => ({
-      ...originalField.field_profile,
-      location_name: originalField.field_profile.location_name ?? geocodedLocationName,
-    }),
-    [originalField, geocodedLocationName],
-  );
+  const frostWeeks = useMemo(() => getFrostWeeks(originalDemoField.climate_data.frost_dates), []);
 
   const scoredField = useMemo(() => runSimulation(fieldJson), [fieldJson]);
   const strategies = scoredField.rotation_strategies as ScoredRotationStrategy[];
@@ -184,7 +112,7 @@ export default function SimulationPage({
   }
 
   function handleReset(strategyIndex: number) {
-    applyTimelineChange(strategyIndex, originalField.rotation_strategies[strategyIndex].timeline);
+    applyTimelineChange(strategyIndex, originalDemoField.rotation_strategies[strategyIndex].timeline);
   }
 
   function handlePrioritiesChange(newPriorities: Priorities) {
@@ -201,7 +129,7 @@ export default function SimulationPage({
   }
 
   function handleResetPriorities() {
-    handlePrioritiesChange(originalField.survey_inputs.priorities);
+    handlePrioritiesChange(originalDemoField.survey_inputs.priorities);
   }
 
   function handleToggleGap(gapKey: string, templateIndex: number, gapInfo: GapInfo) {
@@ -265,7 +193,7 @@ export default function SimulationPage({
 
   function handleRemoveCoverCrop(strategyIndex: number, templateIndex: number) {
     const timeline = fieldJson.rotation_strategies[strategyIndex].timeline;
-    const originalTimeline = originalField.rotation_strategies[strategyIndex].timeline;
+    const originalTimeline = originalDemoField.rotation_strategies[strategyIndex].timeline;
     applyTimelineChange(strategyIndex, removeCoverCropSlot(timeline, originalTimeline, templateIndex, crops));
   }
 
@@ -363,14 +291,6 @@ export default function SimulationPage({
     [strategies],
   );
 
-  // The lane the user chose on the Results page opens with its breakdown
-  // showing. An id that matches nothing (or none at all) leaves RotationLane's
-  // own default — the top-ranked lane — in charge.
-  const expandedStrategyId = useMemo(() => {
-    if (!selectedStrategyId) return null;
-    return strategies.some((strategy) => strategy.strategy_id === selectedStrategyId) ? selectedStrategyId : null;
-  }, [selectedStrategyId, strategies]);
-
   const laneNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   useFlipReorder(
     rankedEntries.map((entry) => entry.strategy.strategy_id),
@@ -379,15 +299,8 @@ export default function SimulationPage({
 
   return (
     <>
-      {!embedded && <AppHeader fieldProfile={headerFieldProfile} onBack={onBackToResults} />}
-      <div style={pageStyle(embedded)}>
-        {embedded && onBackToResults && (
-          <p style={backLinkRowStyle}>
-            <button style={backLinkStyle} onClick={onBackToResults}>
-              ← Back to crop plans
-            </button>
-          </p>
-        )}
+      <AppHeader fieldProfile={originalDemoField.field_profile} />
+      <div style={pageStyle}>
         <Toolbar
           prioritiesOpen={prioritiesOpen}
           onTogglePriorities={() => setPrioritiesOpen((open) => !open)}
@@ -419,8 +332,7 @@ export default function SimulationPage({
               rank={rankPosition + 1}
               strategyIndex={index}
               templateLength={fieldJson.rotation_strategies[index].timeline.length}
-              isEdited={!isSameTimeline(fieldJson.rotation_strategies[index].timeline, originalField.rotation_strategies[index].timeline)}
-              startExpanded={expandedStrategyId ? strategy.strategy_id === expandedStrategyId : undefined}
+              isEdited={!isSameTimeline(fieldJson.rotation_strategies[index].timeline, originalDemoField.rotation_strategies[index].timeline)}
               onSwapAlternate={(templateIndex) => handleSwapAlternate(index, templateIndex)}
               onReset={() => handleReset(index)}
               openGapKey={openGap?.key ?? null}
@@ -435,15 +347,8 @@ export default function SimulationPage({
             />
           ))}
         </DndContext>
-        {/* The disclaimer normally lives in AppFooter; embedded, it has to
-            ride along with the lanes so it is never dropped. */}
-        {embedded && (
-          <div style={embeddedDisclaimerRowStyle}>
-            <Disclaimer />
-          </div>
-        )}
       </div>
-      {!embedded && <AppFooter />}
+      <AppFooter />
     </>
   );
 }

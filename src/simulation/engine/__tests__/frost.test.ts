@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import demoField from "../../fixtures/demo-field.json";
-import { getFrostWeek, getFrostWeeks, weekToMonthDay } from "../frost";
+import { getFrostWeek, getFrostWeeks } from "../frost";
 import type { FrostDates } from "../types";
 
 const frostDates = demoField.climate_data.frost_dates as unknown as FrostDates;
@@ -39,24 +39,5 @@ describe("getFrostWeeks", () => {
       last_spring_frost: 11,
       first_fall_frost: 46,
     });
-  });
-});
-
-describe("weekToMonthDay", () => {
-  it("round-trips every week back through getFrostWeek", () => {
-    for (let week = 1; week <= 52; week++) {
-      expect(getFrostWeek(weekToMonthDay(week))).toBe(week);
-    }
-  });
-
-  it("formats as zero-padded MM-DD", () => {
-    expect(weekToMonthDay(1)).toBe("01-04");
-    expect(weekToMonthDay(11)).toBe("03-15");
-    expect(weekToMonthDay(46)).toBe("11-15");
-  });
-
-  it("clamps out-of-range weeks into 1-52", () => {
-    expect(weekToMonthDay(0)).toBe(weekToMonthDay(1));
-    expect(weekToMonthDay(99)).toBe(weekToMonthDay(52));
   });
 });
