@@ -1,9 +1,12 @@
 import { useState } from "react";
-import type { Confidence, QualitativeAnalysis, SeasonResult } from "../../engine/types";
+import type { Confidence, Priorities, QualitativeAnalysis, SeasonResult } from "../../engine/types";
 import { groupReasons } from "./groupReasons";
+import { withLivePriorities } from "./livePriorityText";
 
 export interface BreakdownPanelProps {
   qualitativeAnalysis: QualitativeAnalysis;
+  /** Live slider values, so a priority quoted in why_suggested stays current. */
+  priorities: Priorities;
   seasons: SeasonResult[];
   confidence: Confidence;
   checkLocally: string[];
@@ -54,6 +57,11 @@ const sectionHeadingStyle: React.CSSProperties = {
   letterSpacing: "0.04em",
   color: "var(--color-text-muted)",
   margin: "0 0 8px 0",
+};
+
+const subLabelStyle: React.CSSProperties = {
+  ...sectionHeadingStyle,
+  marginTop: "16px",
 };
 
 const bodyTextStyle: React.CSSProperties = {
@@ -115,7 +123,13 @@ function deltaBadgeStyle(delta: number): React.CSSProperties {
   };
 }
 
-export default function BreakdownPanel({ qualitativeAnalysis, seasons, confidence, checkLocally }: BreakdownPanelProps) {
+export default function BreakdownPanel({
+  qualitativeAnalysis,
+  priorities,
+  seasons,
+  confidence,
+  checkLocally,
+}: BreakdownPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showAll, setShowAll] = useState(false);
 
@@ -144,21 +158,27 @@ export default function BreakdownPanel({ qualitativeAnalysis, seasons, confidenc
         <>
           <div>
             <h3 style={sectionHeadingStyle}>Why this strategy</h3>
-            <p style={bodyTextStyle}>{qualitativeAnalysis.why_suggested}</p>
+            <p style={bodyTextStyle}>{withLivePriorities(qualitativeAnalysis.why_suggested, priorities)}</p>
             <p style={bodyTextStyle}>{qualitativeAnalysis.nasa_evidence}</p>
             {qualitativeAnalysis.benefits.length > 0 && (
-              <ul style={listStyle}>
-                {qualitativeAnalysis.benefits.map((benefit) => (
-                  <li key={benefit}>{benefit}</li>
-                ))}
-              </ul>
+              <>
+                <h4 style={subLabelStyle}>Benefits</h4>
+                <ul style={listStyle}>
+                  {qualitativeAnalysis.benefits.map((benefit) => (
+                    <li key={benefit}>{benefit}</li>
+                  ))}
+                </ul>
+              </>
             )}
             {qualitativeAnalysis.information_gaps.length > 0 && (
-              <ul style={listStyle}>
-                {qualitativeAnalysis.information_gaps.map((gap) => (
-                  <li key={gap}>{gap}</li>
-                ))}
-              </ul>
+              <>
+                <h4 style={subLabelStyle}>To confirm locally</h4>
+                <ul style={listStyle}>
+                  {qualitativeAnalysis.information_gaps.map((gap) => (
+                    <li key={gap}>{gap}</li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
 

@@ -353,6 +353,7 @@ export default function SimulationPage({ embedded = false }: SimulationPageProps
               strategy={strategy}
               weeklyTimeline={weeklyTimelines[index]}
               crops={crops}
+              priorities={fieldJson.survey_inputs.priorities}
               playback={playback}
               rank={rankPosition + 1}
               strategyIndex={index}
