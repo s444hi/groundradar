@@ -1,4 +1,4 @@
-import type { CropId, WeatherEventType } from "../engine/types";
+import type { CropId } from "../engine/types";
 
 /**
  * A single growth-stage pixel sprite. `rows` is a grid of characters
@@ -210,27 +210,3 @@ export function getCropSpriteCategory(cropId: CropId): CropSpriteCategory {
 export function getCropSpriteSet(cropId: CropId): CropSpriteSet {
   return CROP_SPRITES[getCropSpriteCategory(cropId)];
 }
-
-// --- DinoRunner: original pixel farmer + hazard icons, single-color only ---
-
-export interface FarmerSpriteSet {
-  frame1: CropSprite;
-  frame2: CropSprite;
-}
-
-// A small person in a wide-brimmed hat — the brim (row 1) is wider than the
-// head/body it sits over, which is what reads as "hat" rather than "head".
-// The 2 frames differ only in the leg row, alternating stride for a simple
-// run cycle (no other animation).
-export const FARMER_SPRITE: FarmerSpriteSet = {
-  frame1: aboveGround([".###.", "#####", ".###.", ".###.", "##.##", "#.#.#", "#...#"]),
-  frame2: aboveGround([".###.", "#####", ".###.", ".###.", "##.##", ".#.#.", "..#.."]),
-};
-
-// One per DinoRunner hazard type (engine/hazards.ts): a puffy cloud, a
-// snowflake, and a sun — small, single-color icons.
-export const HAZARD_ICONS: Record<WeatherEventType, CropSprite> = {
-  heavy_rain: aboveGround([".###.", "#####", "#####"]),
-  frost: aboveGround(["..#..", "#.#.#", ".###.", "#.#.#", "..#.."]),
-  drought: aboveGround(["#.#.#", ".###.", "#####", ".###.", "#.#.#"]),
-};
