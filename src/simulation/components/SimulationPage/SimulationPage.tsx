@@ -6,10 +6,11 @@ import demoFieldJson from "../../fixtures/demo-field.json";
 import { runSimulation } from "../../engine";
 import { getFrostWeeks } from "../../engine/frost";
 import { buildTimeline } from "../../engine/timeline";
-import type { CropsById, FieldJson, RotationSlot } from "../../engine/types";
+import type { CropsById, FieldJson, Priorities, RotationSlot } from "../../engine/types";
 import AppFooter from "../AppFooter/AppFooter";
 import AppHeader from "../AppHeader/AppHeader";
 import PlaybackControls from "../PlaybackControls/PlaybackControls";
+import PrioritySliders from "../PrioritySliders/PrioritySliders";
 import RotationLane from "../RotationLane/RotationLane";
 import type { DragSwapData } from "../Timeline/useDragSwap";
 import { usePlayback } from "../Timeline/usePlayback";
@@ -36,6 +37,7 @@ function isSameTimeline(a: RotationSlot[], b: RotationSlot[]): boolean {
 
 export default function SimulationPage() {
   const [fieldJson, setFieldJson] = useState<FieldJson>(originalDemoField);
+  const [prioritiesOpen, setPrioritiesOpen] = useState(false);
   const frostWeeks = useMemo(() => getFrostWeeks(originalDemoField.climate_data.frost_dates), []);
 
   const scoredField = useMemo(() => runSimulation(fieldJson), [fieldJson]);
@@ -69,6 +71,19 @@ export default function SimulationPage() {
 
   function handleReset(strategyIndex: number) {
     applyTimelineChange(strategyIndex, originalDemoField.rotation_strategies[strategyIndex].timeline);
+  }
+
+  function handlePrioritiesChange(newPriorities: Priorities) {
+    setFieldJson((prev) => ({
+      ...prev,
+      survey_inputs: { ...prev.survey_inputs, priorities: newPriorities },
+    }));
+    // Same "show the result immediately" behavior as a timeline edit.
+    playback.jumpToEnd();
+  }
+
+  function handleResetPriorities() {
+    handlePrioritiesChange(originalDemoField.survey_inputs.priorities);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -122,7 +137,14 @@ export default function SimulationPage() {
     <>
       <AppHeader fieldProfile={originalDemoField.field_profile} />
       <div style={pageStyle}>
-        <Toolbar />
+        <Toolbar prioritiesOpen={prioritiesOpen} onTogglePriorities={() => setPrioritiesOpen((open) => !open)} />
+        {prioritiesOpen && (
+          <PrioritySliders
+            priorities={fieldJson.survey_inputs.priorities}
+            onChange={handlePrioritiesChange}
+            onReset={handleResetPriorities}
+          />
+        )}
         <PlaybackControls playback={playback} />
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           {rankedEntries.map(({ strategy, index }, rankPosition) => (
