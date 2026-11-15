@@ -3,6 +3,16 @@
 ## Project
 Ground Radar is a NASA Space Apps-style web app that helps farmers and gardeners explore crop rotations using NASA Earth data (NASA POWER, GPM, SMAP, ECOSTRESS, GRACE, Landsat/MODIS, SRTM), SoilGrids soil data, and farmer priorities. It supports, not replaces, farmer judgment.
 
+## Built
+- 3 ranked lanes
+- Multi-year rotations (no length limit)
+- Same-season drag-to-reorder
+- Alternate-crop swaps
+- Cover-crop picker on bare gaps
+- Priority sliders
+- Find a better order
+- Pixel growth playback
+
 ## Team split
 - Teammate: landing page, sign-in, dashboard steps (location, trace area, photo upload, survey), Results page, AI chatbot. Produces the field JSON described below.
 - Me: the Simulation. Everything lives in `src/simulation/`. Do not edit files outside that folder without asking (exception: the shared `src/styles/theme.css` if I ask).
@@ -20,8 +30,8 @@ src/simulation/
   engine/index.ts               runSimulation(fieldJson) - the public entry point for the Results page
   engine/__tests__/
   components/                  SimulationPage, ModeToggle, PrioritySliders, RotationCompare, RotationLane,
-                               Timeline, CropCard, GapSlot, CoverCropPicker, ScoreBadge, DinoRunner,
-                               BreakdownPanel, PlantPicker, Disclaimer
+                               Timeline, CropCard, GapSlot, CoverCropPicker, ScoreBadge,
+                               BreakdownPanel, Disclaimer
 docs/design-reference.png      visual reference for the design system
 ```
 
@@ -38,7 +48,7 @@ All scores are 0-100 where higher = better:
 - estimated_irrigation_mm and nitrogen_balance_kg_ha: rough estimates, always labeled "estimate" in the UI
 - confidence: level (High|Medium|Low) + reasons
 - check_locally: list of flags
-- seasons: per season, the year, season, crops, score, subscores, reasons (each with a point delta + plain-English text), and weather events (week + frost|drought|heavy_rain) used by the dino animation
+- seasons: per season, the year, season, crops, score, subscores, reasons (each with a point delta + plain-English text), and weather events (week + frost|drought|heavy_rain)
 
 ## Engine rules
 1. Convert frost dates to week of year (1-52). Planting window = the crop's anchor frost week + its start/end offsets.
@@ -61,11 +71,10 @@ All scores are 0-100 where higher = better:
 12. Deterministic: same input always gives the same output. No randomness.
 
 ## UI rules
-- Rotation mode shows 3 lanes side by side (the teammate's 3 strategies). Plant mode simulates one crop with fresh soil.
+- Rotation mode shows 3 lanes side by side (the teammate's 3 strategies).
 - Lanes: score badge + rank, draggable crop cards, swap button for alternates, brown bare-soil gaps that open a cover crop picker, play button.
 - If a user edits a lane, show: "You changed this rotation, so the explanation is for the original."
 - Priority sliders re-score all lanes live.
-- DinoRunner only replays engine results (events become obstacles). It never runs its own logic.
 - BreakdownPanel: teammate's qualitative_analysis on top, my per-season reasons, confidence, and check_locally flags below.
 - Always show the disclaimer: "This supports, not replaces, your judgment."
 
@@ -98,7 +107,6 @@ Sim styling:
 - Score badges use big Newsreader numerals, like the "78%" in the reference
 - Lanes sit on sage or cream cards; the selected lane gets an olive border
 - Timeline: crop cards as cream rounded blocks, bare gaps as brown striped blocks, cover crops in sage
-- Dino runner: soft sky gradient with a green hill, minimal flat shapes
 - Charts: thin lines, small dot markers, DM Mono labels, no gridline clutter
 
 ## Conventions

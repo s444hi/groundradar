@@ -1,3 +1,4 @@
+import { FAMILY_LABELS } from "./familyLabels";
 import type { CropId, CropsById, Family, Priorities, RotationStrategy, SeasonResult } from "./types";
 
 export interface FlagsInput {
@@ -55,8 +56,9 @@ export function computeCheckLocally(input: FlagsInput): string[] {
 
   const repeatedFamilies = detectRepeatedCashFamilies(input.seasons, input.crops);
   if (repeatedFamilies.size > 0) {
+    const labels = [...repeatedFamilies].map((family) => FAMILY_LABELS[family]).join(", ");
     flags.push(
-      `Check locally for ${[...repeatedFamilies].join(", ")} pest/disease pressure — this rotation brings that cash-crop family back season after season.`,
+      `Check locally for ${labels} pest/disease pressure — this rotation brings that cash-crop family back season after season.`,
     );
   }
 

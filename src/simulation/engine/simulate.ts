@@ -1,4 +1,5 @@
 import { getFrostWeeks } from "./frost";
+import { getRotationCycle, placementYearOffset } from "./rotationCycle";
 import { initSoilState, updateSoilAfterSeason } from "./soil";
 import { scoreSeason, seasonHasCashCrop } from "./scoring";
 import type {
@@ -63,10 +64,20 @@ export function simulateStrategy(input: SimulateInput): SimulationScores {
   let soil = initialSoil;
   const seasons: SeasonResult[] = [];
 
-  for (let yearOffset = 0; yearOffset < years; yearOffset++) {
+  // Mirrors buildTimeline's cycle tiling (see rotationCycle.ts) so a
+  // multi-year template's crops are scored in the same chronological order
+  // they're actually planted in, not re-run as if every slot repeats every
+  // single year.
+  const { rotationLength, minYear } = getRotationCycle(input.strategy.timeline);
+  const numCycles = Math.ceil(years / rotationLength);
+
+  for (let cycle = 0; cycle < numCycles; cycle++) {
     for (const baseSlot of input.strategy.timeline) {
+      const yearOffset = placementYearOffset(cycle, rotationLength, baseSlot.year, minYear);
+      if (yearOffset >= years) continue; // partial trailing cycle, clipped to the requested window
+
       const season = scoreSeason({
-        year: baseSlot.year + yearOffset,
+        year: baseSlot.year + cycle * rotationLength,
         season: baseSlot.season,
         cropIds: baseSlot.crops,
         crops: input.crops,

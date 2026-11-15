@@ -1,6 +1,7 @@
 import cropsJson from "../data/crops.json";
 import { computeConfidence } from "./confidence";
 import { computeCheckLocally } from "./flags";
+import { getFrostWeeks } from "./frost";
 import { simulateStrategy } from "./simulate";
 import type { CropsById, FieldJson, RotationStrategy } from "./types";
 
@@ -14,6 +15,7 @@ const crops = cropsJson.crops as unknown as CropsById;
  */
 export function runSimulation(fieldJson: FieldJson): FieldJson {
   const { field_profile, survey_inputs, climate_data } = fieldJson;
+  const frostWeeks = getFrostWeeks(climate_data.frost_dates);
 
   const rotation_strategies: RotationStrategy[] = fieldJson.rotation_strategies.map((strategy) => {
     const simResult = simulateStrategy({
@@ -33,6 +35,8 @@ export function runSimulation(fieldJson: FieldJson): FieldJson {
       strategy,
       crops,
       seasons,
+      weeklyClimatology: climate_data.weekly_climatology,
+      frostWeeks,
     });
 
     const check_locally = computeCheckLocally({

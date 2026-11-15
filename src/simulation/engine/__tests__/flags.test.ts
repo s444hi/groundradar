@@ -91,7 +91,7 @@ describe("computeCheckLocally", () => {
       makeSeason(["tomato"]), // solanaceae again -> repeat
     ];
     const flags = computeCheckLocally({ strategy, crops, priorities: basePriorities, seasons });
-    expect(flags.some((f) => f.includes("solanaceae"))).toBe(true);
+    expect(flags.some((f) => f.includes("Nightshade family (Solanaceae)"))).toBe(true);
   });
 
   it("does not flag a family repeat when cash crops alternate families", () => {
