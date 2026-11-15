@@ -44,13 +44,6 @@ const controlButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const speedButtonStyle = (active: boolean): React.CSSProperties => ({
-  ...controlButtonStyle,
-  background: active ? "var(--color-olive)" : "var(--color-bg)",
-  color: active ? "var(--color-text-on-dark)" : "var(--color-text)",
-  borderColor: active ? "var(--color-olive)" : "var(--color-border)",
-});
-
 const yearLabelRowStyle: React.CSSProperties = {
   position: "relative",
   height: "16px",
@@ -199,12 +192,6 @@ export default function Timeline({ weeklyTimeline, crops, baseYear, playback }: 
         </button>
         <button style={controlButtonStyle} onClick={playback.replay}>
           Replay
-        </button>
-        <button style={speedButtonStyle(playback.speed === 1)} onClick={() => playback.setSpeed(1)}>
-          1×
-        </button>
-        <button style={speedButtonStyle(playback.speed === 2)} onClick={() => playback.setSpeed(2)}>
-          2×
         </button>
       </div>
 

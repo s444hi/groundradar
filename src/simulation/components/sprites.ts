@@ -36,19 +36,24 @@ export const CROP_SPRITES: Record<CropSpriteCategory, CropSpriteSet> = {
   fruiting: {
     sprout: aboveGround(["..#..", ".###.", "..#.."]),
     young: aboveGround(["..#..", ".###.", "#####", "#.#.#", ".###.", "..#..", "..#.."]),
+    // 3 fruits hang unevenly off the outer edges/lower branches — different
+    // columns AND no two sharing a row, so nothing can read as a mirrored
+    // "eyes" pair or a centered "mouth".
     full: aboveGround([
       ".........",
       "...###...",
       "..#####..",
       ".#######.",
       "#########",
-      "#.#####.#",
-      "#.o###o.#",
-      "..#####..",
-      "..#.o.#..",
-      "..#####..",
+      "#########",
+      ".#######.",
+      ".o#####..",
+      ".o#####..",
+      "..#####o.",
+      "..#####o.",
       "...###...",
-      "....#....",
+      "...o#....",
+      "...o#....",
       "....#....",
       "....#....",
     ]),

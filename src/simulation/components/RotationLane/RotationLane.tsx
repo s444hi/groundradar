@@ -59,7 +59,11 @@ const scopeNoteStyle: React.CSSProperties = {
 
 const scoreRowStyle: React.CSSProperties = {
   display: "flex",
-  alignItems: "center",
+  // Top-aligned, not centered: centering would vertically offset the much
+  // shorter mini-score column relative to the tall "78%" badge, pushing
+  // "Overall success" down away from its own numeral instead of sitting
+  // right under it.
+  alignItems: "flex-start",
   gap: "32px",
   flexWrap: "wrap",
   marginBottom: "32px",

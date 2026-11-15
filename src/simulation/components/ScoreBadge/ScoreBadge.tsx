@@ -20,6 +20,7 @@ const largeNumeralStyle: React.CSSProperties = {
   fontWeight: 400,
   letterSpacing: "-0.02em",
   fontSize: "96px",
+  lineHeight: 1,
   margin: 0,
   color: "var(--color-text)",
 };

@@ -1,25 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
 
-export type PlaybackSpeed = 1 | 2;
-
 export interface PlaybackApi {
   currentWeek: number;
   isPlaying: boolean;
-  speed: PlaybackSpeed;
   isFinished: boolean;
   play: () => void;
   pause: () => void;
   replay: () => void;
   seek: (week: number) => void;
-  setSpeed: (speed: PlaybackSpeed) => void;
   /** For a future edit (e.g. drag/swap): jump straight to the final state
    * instead of replaying the whole animation from scratch. */
   jumpToEnd: () => void;
 }
 
-// Calibrated so a full 3-year (156-week) run takes ~10s at 1x.
-const WEEKS_PER_SECOND_AT_1X = 15.6;
+// Calibrated so a full 3-year (156-week) run takes ~10s.
+const WEEKS_PER_SECOND = 15.6;
 
 /**
  * Drives a single shared "growth clock" (currentWeek, 0..totalWeeks) via
@@ -32,22 +28,17 @@ export function usePlayback(totalWeeks: number): PlaybackApi {
 
   const [currentWeek, setCurrentWeek] = useState(() => (prefersReducedMotion ? totalWeeks : 0));
   const [isPlaying, setIsPlaying] = useState(() => !prefersReducedMotion);
-  const [speed, setSpeedState] = useState<PlaybackSpeed>(1);
 
   const weekRef = useRef(currentWeek);
-  const speedRef = useRef(speed);
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
 
-  // Keep the refs in sync after each render (not during it), so the rAF
-  // loop below can read the latest currentWeek/speed without needing to
-  // restart on every change.
+  // Keep the ref in sync after each render (not during it), so the rAF loop
+  // below can read the latest currentWeek without needing to restart on
+  // every change.
   useEffect(() => {
     weekRef.current = currentWeek;
   }, [currentWeek]);
-  useEffect(() => {
-    speedRef.current = speed;
-  }, [speed]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -60,7 +51,7 @@ export function usePlayback(totalWeeks: number): PlaybackApi {
       const deltaMs = time - lastTimeRef.current;
       lastTimeRef.current = time;
 
-      const deltaWeeks = (deltaMs / 1000) * WEEKS_PER_SECOND_AT_1X * speedRef.current;
+      const deltaWeeks = (deltaMs / 1000) * WEEKS_PER_SECOND;
       const next = Math.min(totalWeeks, weekRef.current + deltaWeeks);
       weekRef.current = next;
       setCurrentWeek(next);
@@ -104,8 +95,6 @@ export function usePlayback(totalWeeks: number): PlaybackApi {
     [totalWeeks],
   );
 
-  const setSpeed = useCallback((next: PlaybackSpeed) => setSpeedState(next), []);
-
   const jumpToEnd = useCallback(() => {
     weekRef.current = totalWeeks;
     setCurrentWeek(totalWeeks);
@@ -115,13 +104,11 @@ export function usePlayback(totalWeeks: number): PlaybackApi {
   return {
     currentWeek,
     isPlaying,
-    speed,
     isFinished: currentWeek >= totalWeeks,
     play,
     pause,
     replay,
     seek,
-    setSpeed,
     jumpToEnd,
   };
 }
