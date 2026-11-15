@@ -2,6 +2,7 @@ import cropsData from '../simulation/data/crops.json';
 import type { TracedFieldData } from '../components/FieldTracerMap';
 import type { RotationSlotInput, SurveyModalOutput } from '../components/FieldSurveyModal';
 import type { NasaFieldEnvironment } from './nasaClimateService';
+import { supabase } from './supabaseService';
 
 export interface RotationStrategy {
   id: string;
@@ -47,18 +48,15 @@ async function inspectFieldPhotosWithGeminiVision(
   nasaEnv: NasaFieldEnvironment,
   targetCropName: string
 ): Promise<{ diagnosis: string; localChecks: string[]; verified: boolean } | null> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey || photosBase64.length === 0) return null;
+  if (!supabase || photosBase64.length === 0) return null;
 
   try {
     const imageParts = photosBase64.slice(0, 6).map((dataUrl) => {
       const [header, data] = dataUrl.split(',');
       const mimeMatch = header.match(/data:(.*?);base64/);
       return {
-        inline_data: {
-          mime_type: mimeMatch ? mimeMatch[1] : 'image/jpeg',
-          data,
-        },
+        mime_type: mimeMatch ? mimeMatch[1] : 'image/jpeg',
+        data,
       };
     });
 
@@ -77,21 +75,12 @@ Respond ONLY with valid JSON (no markdown fences):
   "localChecks": ["Actionable field check #1 based on the photos + NASA data", "Actionable field check #2"]
 }`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }, ...imageParts] }],
-          generationConfig: { temperature: 0.3 },
-        }),
-      }
-    );
+    const { data: geminiData, error } = await supabase.functions.invoke<{ text?: string }>('gemini', {
+      body: { prompt, images: imageParts, temperature: 0.3 },
+    });
 
-    if (!res.ok) throw new Error(`Gemini Vision HTTP ${res.status}`);
-    const json = await res.json();
-    const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (error) throw error;
+    const rawText = geminiData?.text || '';
     const cleaned = rawText.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
 
@@ -281,11 +270,10 @@ export async function askFieldAgronomistLive(
   analysis: GroundRadarAnalysisResult,
   selectedStrategy: RotationStrategy
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const { climate_summary, soil } = analysis.nasa_environment;
   const { field_profile } = analysis;
 
-  if (apiKey) {
+  if (supabase) {
     try {
       const prompt = `You are Ground Radar's AI Field Agronomist. Answer the farmer's question concisely (3-4 sentences max) citing their exact NASA & USDA metrics:
 - Location: ${field_profile.latitude}°, ${field_profile.longitude}° (${field_profile.area_acres} acres, ${field_profile.mode})
@@ -296,21 +284,12 @@ export async function askFieldAgronomistLive(
 
 Farmer Question: "${question}"`;
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.4 },
-          }),
-        }
-      );
+      const { data: geminiData, error } = await supabase.functions.invoke<{ text?: string }>('gemini', {
+        body: { prompt, temperature: 0.4 },
+      });
 
-      if (res.ok) {
-        const json = await res.json();
-        const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!error) {
+        const text = geminiData?.text;
         if (text) return text.trim();
       }
     } catch (err) {
