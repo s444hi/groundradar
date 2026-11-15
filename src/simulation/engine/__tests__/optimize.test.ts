@@ -64,13 +64,12 @@ describe("findBetterRotation", () => {
     expect(allCrops).toContain("bell_pepper");
   });
 
-  it("returns improved: false and an unchanged strategy when no move helps (soil_builder_legume is already near-optimal)", () => {
+  it("finds an improvement for soil_builder_legume by reordering its warm-season crops (order now actually matters)", () => {
     const startingScore = overallScoreOf(soilBuilderStrategy);
     const result = findBetterRotation(soilBuilderStrategy, ctx);
 
-    expect(result.improved).toBe(false);
-    expect(result.overallScore).toBeCloseTo(startingScore, 5);
-    expect(result.strategy.timeline).toEqual(soilBuilderStrategy.timeline);
+    expect(result.improved).toBe(true);
+    expect(result.overallScore).toBeGreaterThan(startingScore);
   });
 
   it("is deterministic", () => {

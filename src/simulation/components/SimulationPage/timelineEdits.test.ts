@@ -15,14 +15,14 @@ function makeSlot(overrides: Partial<RotationSlot> = {}): RotationSlot {
 }
 
 describe("swapTemplateSlots", () => {
-  it("swaps crops/is_mix/alternate_crop_ids/purpose between two slots, keeping year/season", () => {
+  it("swaps crops/is_mix/alternate_crop_ids/purpose between two same-season slots, keeping year/season", () => {
     const timeline = [
-      makeSlot({ season: "warm_season", crops: ["bell_pepper"], purpose: "cash crop" }),
-      makeSlot({ season: "cool_season", crops: ["fallow"], purpose: "unplanted" }),
+      makeSlot({ year: 2026, season: "warm_season", crops: ["bell_pepper"], purpose: "cash crop" }),
+      makeSlot({ year: 2027, season: "warm_season", crops: ["bush_bean"], purpose: "second-year cash crop" }),
     ];
     const result = swapTemplateSlots(timeline, 0, 1);
-    expect(result[0]).toMatchObject({ season: "warm_season", crops: ["fallow"], purpose: "unplanted" });
-    expect(result[1]).toMatchObject({ season: "cool_season", crops: ["bell_pepper"], purpose: "cash crop" });
+    expect(result[0]).toMatchObject({ year: 2026, season: "warm_season", crops: ["bush_bean"], purpose: "second-year cash crop" });
+    expect(result[1]).toMatchObject({ year: 2027, season: "warm_season", crops: ["bell_pepper"], purpose: "cash crop" });
   });
 
   it("is a no-op for the same index or an out-of-range index", () => {
@@ -30,6 +30,14 @@ describe("swapTemplateSlots", () => {
     expect(swapTemplateSlots(timeline, 0, 0)).toBe(timeline);
     expect(swapTemplateSlots(timeline, 0, 5)).toBe(timeline);
     expect(swapTemplateSlots(timeline, -1, 1)).toBe(timeline);
+  });
+
+  it("is a no-op across different seasons (warm cannot swap with cool)", () => {
+    const timeline = [
+      makeSlot({ season: "warm_season", crops: ["bell_pepper"] }),
+      makeSlot({ season: "cool_season", crops: ["fallow"] }),
+    ];
+    expect(swapTemplateSlots(timeline, 0, 1)).toBe(timeline);
   });
 
   it("does not mutate the input array", () => {

@@ -79,11 +79,70 @@ describe("simulateStrategy", () => {
     expect(baseline.erosion_protection_score).toBeLessThanOrEqual(40);
   });
 
-  it("scores existing_baseline and soil_builder_legume equally on income (same cash crop, different non-cash winter)", () => {
+  it("scores soil_builder_legume's income lower than existing_baseline's (year two trades the high-value bell pepper for a medium-value bush bean)", () => {
     const baseline = simulate(baselineStrategy);
     const soilBuilder = simulate(soilBuilderStrategy);
 
-    expect(soilBuilder.income_score).toBe(baseline.income_score);
+    expect(soilBuilder.income_score).toBeLessThan(baseline.income_score!);
+  });
+
+  it("cycles a 2-year template's seasons in correct chronological order, threading soil state across years", () => {
+    const twoYearStrategy: RotationStrategy = {
+      strategy_id: "two_year_sim_test",
+      title: "Two year sim test",
+      is_baseline: true,
+      timeline: [
+        { year: 2026, season: "warm_season", crops: ["bush_bean"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2026, season: "cool_season", crops: ["fallow"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2027, season: "warm_season", crops: ["tomato"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2027, season: "cool_season", crops: ["fallow"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+      ],
+      simulation_scores: null,
+      qualitative_analysis: emptyQualitativeAnalysis,
+    };
+
+    const result = simulateStrategy({
+      strategy: twoYearStrategy,
+      crops,
+      soil,
+      pastRotation,
+      frostDates,
+      weeklyClimatology,
+      slopePercent,
+      priorities,
+    });
+    const seasons = result.seasons!;
+
+    expect(seasons.length).toBe(6);
+    expect(seasons.map((s) => ({ year: s.year, crops: s.crops }))).toEqual([
+      { year: 2026, crops: ["bush_bean"] },
+      { year: 2026, crops: ["fallow"] },
+      { year: 2027, crops: ["tomato"] },
+      { year: 2027, crops: ["fallow"] },
+      { year: 2028, crops: ["bush_bean"] },
+      { year: 2028, crops: ["fallow"] },
+    ]);
+
+    // Year 1's bush_bean (a nitrogen fixer) should raise the nitrogen seen
+    // by year 2's tomato (a heavy feeder, penalized more on low nitrogen)
+    // relative to the field's starting low-nitrogen soil. This only holds
+    // if soil state threads in correct chronological order across years,
+    // not re-run as if the whole 2-year template were one year.
+    const startingNitrogenSeason = simulateStrategy({
+      strategy: { ...twoYearStrategy, timeline: [twoYearStrategy.timeline[2], twoYearStrategy.timeline[3]] },
+      crops,
+      soil,
+      pastRotation,
+      frostDates,
+      weeklyClimatology,
+      slopePercent,
+      priorities,
+      years: 1,
+    }).seasons![0];
+    const tomatoSeasonAfterBushBean = seasons[2];
+    expect(tomatoSeasonAfterBushBean.subscores.nitrogen_score).toBeGreaterThan(
+      startingNitrogenSeason.subscores.nitrogen_score,
+    );
   });
 
   it("multiplies by season fit instead of averaging it in, so a frost-killed crop tanks the score", () => {

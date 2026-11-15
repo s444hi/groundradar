@@ -190,6 +190,22 @@
           "alternate_crop_ids": [],
           "is_mix": true,
           "purpose": "Overwinter nitrogen fixation and slope erosion protection"
+        },
+        {
+          "year": 2027,
+          "season": "warm_season",
+          "crops": ["bush_bean"],
+          "alternate_crop_ids": ["soybean"],
+          "is_mix": false,
+          "purpose": "Second-year nitrogen-fixing cash crop, alternating away from continuous Solanaceae"
+        },
+        {
+          "year": 2027,
+          "season": "cool_season",
+          "crops": ["oats"],
+          "alternate_crop_ids": ["crimson_clover"],
+          "is_mix": false,
+          "purpose": "Low-input winter ground cover before the two-year rotation repeats"
         }
       ],
       "simulation_scores": {
@@ -212,7 +228,8 @@
         "nasa_evidence": "GPM climatology shows sufficient autumn rainfall to establish cool-season cover crops without irrigation, stabilizing the 3.4% SRTM slope.",
         "benefits": [
           "Legume component biologically fixes atmospheric nitrogen for the following warm-season crop",
-          "Fibrous rye root network anchors topsoil and improves winter rainfall infiltration"
+          "Fibrous rye root network anchors topsoil and improves winter rainfall infiltration",
+          "Alternates bell peppers and bush beans across the two-year cycle, spreading market risk and limiting continuous Solanaceae pest buildup"
         ],
         "information_gaps": [
           "Spring termination method (mowing, crimping, or tilling) depends on available farm or garden equipment"
@@ -242,6 +259,22 @@
           "alternate_crop_ids": ["crimson_clover"],
           "is_mix": false,
           "purpose": "Low-input winter ground cover and weed suppression"
+        },
+        {
+          "year": 2027,
+          "season": "warm_season",
+          "crops": ["buckwheat"],
+          "alternate_crop_ids": ["sorghum_sudangrass"],
+          "is_mix": false,
+          "purpose": "Fast, low-water cover crop adding a third plant family (Polygonaceae) to the pest-break rotation"
+        },
+        {
+          "year": 2027,
+          "season": "cool_season",
+          "crops": ["onion"],
+          "alternate_crop_ids": ["hairy_vetch"],
+          "is_mix": false,
+          "purpose": "Cash crop income in year two, adding a fourth distinct plant family (Amaryllidaceae) to the pest-break rotation"
         }
       ],
       "simulation_scores": {
@@ -264,7 +297,8 @@
         "nasa_evidence": "NASA POWER, ECOSTRESS, and GRACE trends show high late-summer evaporative stress and gradual groundwater decline, favoring shorter-cycle crops.",
         "benefits": [
           "Interrupts Solanaceae-specific soil pests and fungal disease cycles",
-          "Reduces peak late-summer irrigation demand compared to long-season fruiting crops"
+          "Reduces peak late-summer irrigation demand compared to long-season fruiting crops",
+          "Introduces two more plant families (buckwheat/Polygonaceae, onion/Amaryllidaceae) in year two for deeper pest-cycle disruption while keeping a cash crop in both years"
         ],
         "information_gaps": [
           "Local market pricing and buyer demand for Bush Beans versus Bell Peppers require grower confirmation"

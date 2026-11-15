@@ -7,7 +7,7 @@ import { getVisibleStages } from "../Timeline/getVisibleStages";
 import type { GrowthStageKey } from "../Timeline/getVisibleStages";
 import { LABEL_THRESHOLD_PERCENT, PIXEL_SIZE, spriteBottomOffset, TRACK_HEIGHT } from "../Timeline/layout";
 import { useDragSwap } from "../Timeline/useDragSwap";
-import type { CropId, CropsById } from "../../engine/types";
+import type { CropId, CropsById, Season } from "../../engine/types";
 
 export interface CropCardProps {
   cropIds: CropId[];
@@ -18,6 +18,7 @@ export interface CropCardProps {
   widthPercent: number;
   currentWeek: number;
   dragDropId: string;
+  season: Season;
   alternateIds: CropId[];
   onSwapAlternate?: () => void;
 }
@@ -98,6 +99,7 @@ export default function CropCard({
   widthPercent,
   currentWeek,
   dragDropId,
+  season,
   alternateIds,
   onSwapAlternate,
 }: CropCardProps) {
@@ -119,7 +121,7 @@ export default function CropCard({
   const visibleStages = getVisibleStages({ startAbsoluteWeek, weekCount }, widthPercent, currentWeek);
   const showLabel = widthPercent >= LABEL_THRESHOLD_PERCENT && visibleStages.length > 0;
 
-  const drag = useDragSwap(dragDropId);
+  const drag = useDragSwap(dragDropId, { season });
 
   return (
     <div

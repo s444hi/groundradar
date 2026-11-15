@@ -1,3 +1,4 @@
+import { getRotationCycle, placementYearOffset } from "./rotationCycle";
 import type {
   CropOccupancy,
   CropsById,
@@ -65,15 +66,28 @@ export function buildTimeline(
 
   const slots: ExpandedRotationSlot[] = [];
 
-  for (let yearOffset = 0; yearOffset < years; yearOffset++) {
+  // A multi-year template (e.g. a different warm crop in year 2) repeats
+  // every `rotationLength` years, not every single year — so each template
+  // slot is placed at its own year-within-cycle offset, not blindly on
+  // every pass. `slotIndex = cycle * templateLength + i` deliberately keeps
+  // the same formula shape as a 1-year template's old `yearOffset * length +
+  // i`, so `slotIndex % templateLength` still always recovers template
+  // index `i` regardless of rotation length (drag/swap relies on this).
+  const { rotationLength, minYear } = getRotationCycle(strategy.timeline);
+  const numCycles = Math.ceil(years / rotationLength);
+
+  for (let cycle = 0; cycle < numCycles; cycle++) {
     for (let i = 0; i < strategy.timeline.length; i++) {
       const baseSlot = strategy.timeline[i];
+      const yearOffset = placementYearOffset(cycle, rotationLength, baseSlot.year, minYear);
+      if (yearOffset >= years) continue; // partial trailing cycle, clipped to the requested window
+
       const occupiedWeeks = computeSlotOccupancy(baseSlot, crops, frostWeeks, yearOffset, years);
 
       const expandedSlot: ExpandedRotationSlot = {
         ...baseSlot,
-        year: baseSlot.year + yearOffset,
-        slotIndex: yearOffset * strategy.timeline.length + i,
+        year: baseSlot.year + cycle * rotationLength,
+        slotIndex: cycle * strategy.timeline.length + i,
         yearOffset,
         occupiedWeeks,
       };

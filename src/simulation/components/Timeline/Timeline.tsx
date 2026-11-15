@@ -201,7 +201,6 @@ export default function Timeline({
             // Our placement never produces a segment spanning more than one
             // expanded slot in practice; take the first if it ever did.
             const expandedSlotIndex = segment.slotIndexes[0] ?? 0;
-            const dragDropId = `${strategyIndex}:${expandedSlotIndex}`;
             const templateIndex = expandedSlotIndex % templateLength;
             const expandedSlot = weeklyTimeline.slots.find((slot) => slot.slotIndex === expandedSlotIndex);
             const alternateIds = expandedSlot?.alternate_crop_ids ?? [];
@@ -214,7 +213,6 @@ export default function Timeline({
                 endAbsoluteWeek={segment.endAbsoluteWeek}
                 widthPercent={widths[index]}
                 currentWeek={playback.currentWeek}
-                dragDropId={dragDropId}
               />
             ) : (
               <CropCard
@@ -226,7 +224,8 @@ export default function Timeline({
                 endAbsoluteWeek={segment.endAbsoluteWeek}
                 widthPercent={widths[index]}
                 currentWeek={playback.currentWeek}
-                dragDropId={dragDropId}
+                dragDropId={`${strategyIndex}:${expandedSlotIndex}`}
+                season={expandedSlot?.season ?? "warm_season"}
                 alternateIds={alternateIds}
                 onSwapAlternate={() => onSwapAlternate(templateIndex)}
               />

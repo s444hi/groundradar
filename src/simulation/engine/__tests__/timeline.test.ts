@@ -19,7 +19,6 @@ const emptyQualitativeAnalysis: QualitativeAnalysis = {
 };
 
 const baselineStrategy = demoField.rotation_strategies[0] as unknown as RotationStrategy;
-const soilBuilderStrategy = demoField.rotation_strategies[1] as unknown as RotationStrategy;
 
 describe("buildTimeline", () => {
   it("defaults to a 3-year repeat", () => {
@@ -77,7 +76,27 @@ describe("buildTimeline", () => {
   });
 
   it("paints both crop ids of a mix into the same shared window, including a forward wrap", () => {
-    const result = buildTimeline(soilBuilderStrategy, crops, frostWeeks);
+    // Inline fixture (not the demo field's soil_builder_legume, which is a
+    // 2-year rotation) so this test stays about mixes + forward-wrap, not
+    // coupled to fixture content that can change independently.
+    const mixStrategy: RotationStrategy = {
+      strategy_id: "mix_test",
+      title: "Mix test",
+      is_baseline: true,
+      timeline: [
+        {
+          year: 2026,
+          season: "cool_season",
+          crops: ["crimson_clover", "winter_rye"],
+          alternate_crop_ids: [],
+          is_mix: true,
+          purpose: "test",
+        },
+      ],
+      simulation_scores: null,
+      qualitative_analysis: emptyQualitativeAnalysis,
+    };
+    const result = buildTimeline(mixStrategy, crops, frostWeeks);
 
     // first_fall_frost week 46 + start_week_offset -8 = planting week 38
     // -> startAbsoluteWeek 37; ceil(180/7) = 26 weeks -> endAbsoluteWeek 62
@@ -94,6 +113,53 @@ describe("buildTimeline", () => {
     expect(result.weeks[0].isBare).toBe(true);
     expect(result.weeks[0].cropIds).not.toContain("crimson_clover");
     expect(result.weeks[0].cropIds).not.toContain("winter_rye");
+  });
+
+  it("tiles a 2-year rotation: year 1's crop in years 1 and 3, year 2's crop only in year 2, no overlap", () => {
+    const twoYearStrategy: RotationStrategy = {
+      strategy_id: "two_year_test",
+      title: "Two year test",
+      is_baseline: true,
+      timeline: [
+        { year: 2026, season: "warm_season", crops: ["bush_bean"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2026, season: "cool_season", crops: ["fallow"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2027, season: "warm_season", crops: ["corn"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+        { year: 2027, season: "cool_season", crops: ["fallow"], alternate_crop_ids: [], is_mix: false, purpose: "test" },
+      ],
+      simulation_scores: null,
+      qualitative_analysis: emptyQualitativeAnalysis,
+    };
+
+    const result = buildTimeline(twoYearStrategy, crops, frostWeeks, 3);
+
+    // Both bush_bean and corn plant at last_spring_frost (week 11) + offset 1
+    // = planting week 12 -> startAbsoluteWeek 11 within each occurrence's
+    // year (same anchor/offset, different crop id). bush_bean's occupancy is
+    // exactly 8 weeks (ceil(55/7)); corn's is longer (ceil(100/7) = 15), so
+    // checking this shared 8-week sub-window is valid for both.
+    const yearOffsets = [0, 1, 2];
+    for (const yearOffset of yearOffsets) {
+      const start = yearOffset * 52 + 11;
+      const end = start + 7; // 8-week window, common to both crops' occupancy
+      const weeksInRange = result.weeks.slice(start, end + 1);
+
+      if (yearOffset === 1) {
+        expect(weeksInRange.every((w) => w.cropIds.includes("corn"))).toBe(true);
+        expect(weeksInRange.every((w) => !w.cropIds.includes("bush_bean"))).toBe(true);
+      } else {
+        expect(weeksInRange.every((w) => w.cropIds.includes("bush_bean"))).toBe(true);
+        expect(weeksInRange.every((w) => !w.cropIds.includes("corn"))).toBe(true);
+      }
+    }
+
+    // No week ever contains both crops.
+    expect(result.weeks.every((w) => !(w.cropIds.includes("bush_bean") && w.cropIds.includes("corn")))).toBe(true);
+
+    // slotIndex % templateLength still recovers the original template index.
+    for (const slot of result.slots) {
+      const templateIndex = slot.slotIndex % twoYearStrategy.timeline.length;
+      expect(slot.season).toBe(twoYearStrategy.timeline[templateIndex].season);
+    }
   });
 
   it("treats an unknown crop id like fallow instead of throwing", () => {

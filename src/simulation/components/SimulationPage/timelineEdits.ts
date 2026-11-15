@@ -15,6 +15,14 @@ export function swapTemplateSlots(timeline: RotationSlot[], indexA: number, inde
   ) {
     return timeline;
   }
+  // Only same-season slots can swap (warm<->warm, cool<->cool) — a crop's
+  // planting window is tied to its season, so a cross-season swap would put
+  // it in the ground at the wrong time of year. The UI also checks this
+  // before offering the drop, but the invariant belongs here too since this
+  // is the one place that actually performs the edit.
+  if (timeline[indexA].season !== timeline[indexB].season) {
+    return timeline;
+  }
 
   const next = timeline.map((slot) => ({ ...slot }));
   const a = timeline[indexA];

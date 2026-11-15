@@ -11,6 +11,7 @@ import AppFooter from "../AppFooter/AppFooter";
 import AppHeader from "../AppHeader/AppHeader";
 import PlaybackControls from "../PlaybackControls/PlaybackControls";
 import RotationLane from "../RotationLane/RotationLane";
+import type { DragSwapData } from "../Timeline/useDragSwap";
 import { usePlayback } from "../Timeline/usePlayback";
 import Toolbar from "../Toolbar/Toolbar";
 import type { ScoredRotationStrategy } from "../types";
@@ -72,7 +73,13 @@ export default function SimulationPage() {
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) return; // dropping on bare soil (not droppable) or nowhere also lands here as `over: undefined`
+
+    // Defense in depth on top of the UI's own highlight/dim and
+    // swapTemplateSlots' own guard: only a same-season drop is a real swap.
+    const activeData = active.data.current as DragSwapData | undefined;
+    const overData = over.data.current as DragSwapData | undefined;
+    if (!activeData || !overData || activeData.season !== overData.season) return;
 
     const [activeStrategyIndexStr, activeSlotIndexStr] = String(active.id).split(":");
     const [overStrategyIndexStr, overSlotIndexStr] = String(over.id).split(":");
