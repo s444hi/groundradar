@@ -1,4 +1,5 @@
 import { weekToMonthName } from "../../engine/frost";
+import { BARE_LABEL_THRESHOLD_PERCENT, TRACK_HEIGHT } from "../Timeline/layout";
 
 export interface GapSlotProps {
   weekCount: number;
@@ -7,57 +8,42 @@ export interface GapSlotProps {
   widthPercent: number;
 }
 
-const labelPillStyle: React.CSSProperties = {
-  background: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-  borderRadius: "var(--radius-pill)",
-  padding: "4px 10px",
-  textAlign: "center",
+const containerStyle: React.CSSProperties = {
+  boxSizing: "border-box",
+  flexShrink: 0,
+  position: "relative",
+  height: `${TRACK_HEIGHT}px`,
 };
 
-const textStyle: React.CSSProperties = {
-  fontFamily: "var(--font-sans)",
-  fontWeight: 500,
-  fontSize: "12px",
-  color: "var(--color-text)",
+const labelStyle: React.CSSProperties = {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
   margin: 0,
-};
-
-const weekLabelStyle: React.CSSProperties = {
+  textAlign: "center",
   fontFamily: "var(--font-mono)",
   fontSize: "10px",
   color: "var(--color-text-muted)",
-  margin: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  padding: "0 2px",
 };
 
+// Bare soil is just empty ground — Timeline's shared ground line and dirt
+// specks already show through underneath; this only adds the conditional
+// label.
 export default function GapSlot({ weekCount, startAbsoluteWeek, endAbsoluteWeek, widthPercent }: GapSlotProps) {
-  // See CropCard: no per-segment radius/full border — the Timeline track
-  // owns the rounded strip shape; each segment gets a right-edge seam.
-  const cardStyle: React.CSSProperties = {
-    width: `${widthPercent}%`,
-    boxSizing: "border-box",
-    flexShrink: 0,
-    minHeight: "72px",
-    borderRight: "1px solid var(--color-border)",
-    background: `repeating-linear-gradient(45deg,
-      color-mix(in srgb, var(--color-sim-bare-soil) 55%, transparent) 0 6px,
-      color-mix(in srgb, var(--color-sim-bare-soil) 20%, transparent) 6px 12px)`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   const startMonth = weekToMonthName((startAbsoluteWeek % 52) + 1);
   const endMonth = weekToMonthName((endAbsoluteWeek % 52) + 1);
   const monthLabel = startMonth === endMonth ? startMonth : `${startMonth}–${endMonth}`;
+  const tooltip = `Bare soil — ${weekCount} wks · ${monthLabel}`;
+  const showLabel = widthPercent >= BARE_LABEL_THRESHOLD_PERCENT;
 
   return (
-    <div style={cardStyle}>
-      <div style={labelPillStyle}>
-        <p style={textStyle}>Bare soil</p>
-        <p style={weekLabelStyle}>
-          {weekCount} wks · {monthLabel}
-        </p>
-      </div>
+    <div style={{ ...containerStyle, width: `${widthPercent}%` }} title={tooltip}>
+      {showLabel && <p style={labelStyle}>Bare soil</p>}
     </div>
   );
 }

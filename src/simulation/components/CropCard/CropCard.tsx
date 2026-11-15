@@ -1,4 +1,13 @@
+import PixelSprite from "../PixelSprite";
+import { getCropSpriteSet } from "../sprites";
 import { weekToMonthName } from "../../engine/frost";
+import {
+  LABEL_THRESHOLD_PERCENT,
+  PIXEL_SIZE,
+  spriteBottomOffset,
+  TRACK_HEIGHT,
+  WIDE_THRESHOLD_PERCENT,
+} from "../Timeline/layout";
 import type { CropId, CropsById } from "../../engine/types";
 
 export interface CropCardProps {
@@ -10,20 +19,27 @@ export interface CropCardProps {
   widthPercent: number;
 }
 
-const nameStyle: React.CSSProperties = {
-  fontFamily: "var(--font-sans)",
-  fontWeight: 500,
-  fontSize: "13px",
-  color: "var(--color-text)",
-  margin: 0,
-  overflowWrap: "break-word",
+const containerStyle: React.CSSProperties = {
+  boxSizing: "border-box",
+  flexShrink: 0,
+  position: "relative",
+  height: `${TRACK_HEIGHT}px`,
 };
 
-const weekLabelStyle: React.CSSProperties = {
-  fontFamily: "var(--font-mono)",
-  fontSize: "11px",
-  color: "var(--color-text-muted)",
+const labelStyle: React.CSSProperties = {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
   margin: 0,
+  textAlign: "center",
+  fontFamily: "var(--font-mono)",
+  fontSize: "10px",
+  color: "var(--color-text-muted)",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  padding: "0 2px",
 };
 
 export default function CropCard({
@@ -34,35 +50,41 @@ export default function CropCard({
   endAbsoluteWeek,
   widthPercent,
 }: CropCardProps) {
-  const hasCoverCrop = cropIds.some((id) => crops[id]?.is_cover_crop);
-  // No per-segment radius or full border: the Timeline's outer track owns
-  // the rounded, bordered "strip" shape (overflow:hidden + radius); each
-  // segment just needs a right-edge seam against its neighbor.
-  const cardStyle: React.CSSProperties = {
-    width: `${widthPercent}%`,
-    boxSizing: "border-box",
-    flexShrink: 0,
-    minHeight: "72px",
-    background: hasCoverCrop ? "var(--color-sage)" : "var(--color-bg)",
-    borderRight: "1px solid var(--color-border)",
-    padding: "8px 12px",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    gap: "4px",
-  };
-
+  // A mix is co-planted in one shared window (same decision as timeline.ts);
+  // the primary crop's category stands in for the whole segment's sprite.
+  const spriteSet = getCropSpriteSet(cropIds[0]);
   const names = cropIds.map((id) => crops[id]?.display_name ?? id).join(" + ");
   const startMonth = weekToMonthName((startAbsoluteWeek % 52) + 1);
   const endMonth = weekToMonthName((endAbsoluteWeek % 52) + 1);
   const monthLabel = startMonth === endMonth ? startMonth : `${startMonth}–${endMonth}`;
+  const tooltip = `${names} — ${weekCount} wks · ${monthLabel}`;
+
+  const isWide = widthPercent >= WIDE_THRESHOLD_PERCENT;
+  const showLabel = widthPercent >= LABEL_THRESHOLD_PERCENT;
+  const stages = isWide
+    ? [
+        { sprite: spriteSet.sprout, leftPercent: 18 },
+        { sprite: spriteSet.young, leftPercent: 50 },
+        { sprite: spriteSet.full, leftPercent: 82 },
+      ]
+    : [{ sprite: spriteSet.full, leftPercent: 50 }];
 
   return (
-    <div style={cardStyle}>
-      <p style={nameStyle}>{names}</p>
-      <p style={weekLabelStyle}>
-        {weekCount} wks · {monthLabel}
-      </p>
+    <div style={{ ...containerStyle, width: `${widthPercent}%` }} title={tooltip}>
+      {stages.map(({ sprite, leftPercent }, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: `${leftPercent}%`,
+            transform: "translateX(-50%)",
+            bottom: `${spriteBottomOffset(sprite)}px`,
+          }}
+        >
+          <PixelSprite grid={sprite.rows} pixelSize={PIXEL_SIZE} />
+        </div>
+      ))}
+      {showLabel && <p style={labelStyle}>{names}</p>}
     </div>
   );
 }

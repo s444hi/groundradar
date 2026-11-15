@@ -29,6 +29,10 @@
   --color-sim-cover-crop: #95A07A;
   --color-sim-water: #7FA1B8;
 
+  /* Colors — pixel art (Timeline's dino-game-style ground + sprites) */
+  --color-pixel: #535353;
+  --color-pixel-light: #B8B8B4;
+
   /* Fonts */
   --font-serif: 'Newsreader', serif;
   --font-sans: 'DM Sans', sans-serif;
