@@ -2,8 +2,10 @@ import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicke
 import { ADDED_COVER_CROP_PURPOSE } from "../CoverCropPicker/coverCropEdits";
 import type { GapInfo } from "../CoverCropPicker/coverCropEdits";
 import CropCard from "../CropCard/CropCard";
+import DinoRunner from "../DinoRunner/DinoRunner";
 import GapSlot from "../GapSlot/GapSlot";
 import { weekToMonthName } from "../../engine/frost";
+import type { Hazard } from "../../engine/hazards";
 import type { CropId, CropsById, WeeklyTimeline } from "../../engine/types";
 import { groupWeeksIntoSegments } from "./groupWeeksIntoSegments";
 import {
@@ -31,6 +33,7 @@ export interface TimelineProps {
   onClosePicker: () => void;
   onPickCoverCrop: (cropId: CropId) => void;
   onRemoveCoverCrop: (templateIndex: number) => void;
+  hazards: Hazard[];
 }
 
 const outerStyle: React.CSSProperties = {
@@ -168,6 +171,7 @@ export default function Timeline({
   onClosePicker,
   onPickCoverCrop,
   onRemoveCoverCrop,
+  hazards,
 }: TimelineProps) {
   const totalWeeks = weeklyTimeline.years * 52;
   const segments = groupWeeksIntoSegments(weeklyTimeline);
@@ -270,6 +274,8 @@ export default function Timeline({
             <span style={playheadLabelStyle(playheadPercent)}>{playheadLabel}</span>
           </>
         )}
+
+        <DinoRunner hazards={hazards} totalWeeks={totalWeeks} playback={playback} />
       </div>
     </div>
   );

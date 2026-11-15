@@ -14,8 +14,11 @@ export interface PlaybackApi {
   jumpToEnd: () => void;
 }
 
-// Calibrated so a full 3-year (156-week) run takes ~10s.
-const WEEKS_PER_SECOND = 15.6;
+// Calibrated so a full 3-year (156-week) run takes ~10s. Exported so
+// anything deriving a wall-clock-paced effect from `currentWeek` (e.g.
+// DinoRunner's run-cycle frame swap) can convert without a second,
+// potentially drifting copy of this constant.
+export const WEEKS_PER_SECOND = 15.6;
 
 /**
  * Drives a single shared "growth clock" (currentWeek, 0..totalWeeks) via

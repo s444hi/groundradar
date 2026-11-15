@@ -5,6 +5,7 @@ import cropsJson from "../../data/crops.json";
 import demoFieldJson from "../../fixtures/demo-field.json";
 import { runSimulation } from "../../engine";
 import { getFrostWeeks } from "../../engine/frost";
+import { getHazards } from "../../engine/hazards";
 import { findBetterRotation } from "../../engine/optimize";
 import { simulateStrategy } from "../../engine/simulate";
 import { buildTimeline } from "../../engine/timeline";
@@ -81,6 +82,13 @@ export default function SimulationPage() {
   const weeklyTimelines = useMemo(
     () => strategies.map((strategy) => buildTimeline(strategy, crops, frostWeeks, 3)),
     [strategies, frostWeeks],
+  );
+
+  // DinoRunner's hazard feed per lane — replays the engine's own weather
+  // events, never computed by the UI itself.
+  const hazardsByStrategy = useMemo(
+    () => fieldJson.rotation_strategies.map((_, index) => getHazards(fieldJson, index)),
+    [fieldJson],
   );
 
   // One shared growth clock: every lane is driven by this same instance, so
@@ -351,6 +359,7 @@ export default function SimulationPage() {
                   suggestion={suggestions[index] ?? null}
                   onAcceptSuggestion={() => handleAcceptSuggestion(index)}
                   onDismissSuggestion={() => handleDismissSuggestion(index)}
+                  hazards={hazardsByStrategy[index]}
                 />
               ))}
             </DndContext>

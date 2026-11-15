@@ -8,6 +8,7 @@ import ScoreBadge from "../ScoreBadge/ScoreBadge";
 import Timeline from "../Timeline/Timeline";
 import type { PlaybackApi } from "../Timeline/usePlayback";
 import { useCountUp } from "./useCountUp";
+import type { Hazard } from "../../engine/hazards";
 import type { CropId, CropsById, WeeklyTimeline } from "../../engine/types";
 import type { OptimizerSuggestion, ScoredRotationStrategy } from "../types";
 
@@ -31,6 +32,7 @@ export interface RotationLaneProps {
   suggestion: OptimizerSuggestion | null;
   onAcceptSuggestion: () => void;
   onDismissSuggestion: () => void;
+  hazards: Hazard[];
 }
 
 const SCORE_COUNT_UP_MS = 600;
@@ -182,6 +184,7 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
     suggestion,
     onAcceptSuggestion,
     onDismissSuggestion,
+    hazards,
   },
   ref,
 ) {
@@ -278,6 +281,7 @@ const RotationLane = forwardRef<HTMLDivElement, RotationLaneProps>(function Rota
         onClosePicker={onClosePicker}
         onPickCoverCrop={onPickCoverCrop}
         onRemoveCoverCrop={onRemoveCoverCrop}
+        hazards={hazards}
       />
 
       {breakdownExpanded ? (
