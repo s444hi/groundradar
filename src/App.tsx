@@ -164,7 +164,7 @@ export function App() {
                 </button>
               </div>
 
-              <SimulationPage />
+              <SimulationPage embedded />
             </div>
           ) : analysisResult && savedRecord ? (
             /* View 2: Full User-Friendly Results Page + Agronomist Chat + Enter Simulation */

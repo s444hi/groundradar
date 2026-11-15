@@ -11,6 +11,7 @@ import { buildTimeline } from "../../engine/timeline";
 import type { CropId, CropsById, FieldJson, Priorities, RotationSlot } from "../../engine/types";
 import AppFooter from "../AppFooter/AppFooter";
 import AppHeader from "../AppHeader/AppHeader";
+import Disclaimer from "../Disclaimer/Disclaimer";
 import type { CoverCropOptionWithDelta } from "../CoverCropPicker/CoverCropPicker";
 import {
   coverCropReason,
@@ -37,13 +38,29 @@ const MIN_SUGGESTION_IMPROVEMENT = 1;
 const crops = cropsJson.crops as unknown as CropsById;
 const originalDemoField = demoFieldJson as unknown as FieldJson;
 
-const pageStyle: React.CSSProperties = {
-  maxWidth: "1200px",
-  margin: "0 auto",
-  padding: "32px 24px 48px",
-  background: "var(--color-bg)",
+const basePageStyle: React.CSSProperties = {
   color: "var(--color-text)",
   fontFamily: "var(--font-sans)",
+};
+
+function pageStyle(embedded: boolean): React.CSSProperties {
+  // Embedded, the Results page's own card already supplies the width,
+  // padding and white ground, so repeating them here would double the
+  // spacing and nest one card inside another.
+  if (embedded) return basePageStyle;
+  return {
+    ...basePageStyle,
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "32px 24px 48px",
+    background: "var(--color-bg)",
+  };
+}
+
+const embeddedDisclaimerRowStyle: React.CSSProperties = {
+  marginTop: "32px",
+  paddingTop: "16px",
+  borderTop: "1px solid var(--color-border)",
 };
 
 const noImprovementStyle: React.CSSProperties = {
@@ -64,7 +81,15 @@ interface OpenGap {
   gapInfo: GapInfo;
 }
 
-export default function SimulationPage() {
+export interface SimulationPageProps {
+  /**
+   * Mounted inside the teammate's Results page, which draws its own header,
+   * card and padding: drop our page chrome so the lanes sit flush in it.
+   */
+  embedded?: boolean;
+}
+
+export default function SimulationPage({ embedded = false }: SimulationPageProps = {}) {
   const [fieldJson, setFieldJson] = useState<FieldJson>(originalDemoField);
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
   const [openGap, setOpenGap] = useState<OpenGap | null>(null);
@@ -299,8 +324,8 @@ export default function SimulationPage() {
 
   return (
     <>
-      <AppHeader fieldProfile={originalDemoField.field_profile} />
-      <div style={pageStyle}>
+      {!embedded && <AppHeader fieldProfile={originalDemoField.field_profile} />}
+      <div style={pageStyle(embedded)}>
         <Toolbar
           prioritiesOpen={prioritiesOpen}
           onTogglePriorities={() => setPrioritiesOpen((open) => !open)}
@@ -347,8 +372,15 @@ export default function SimulationPage() {
             />
           ))}
         </DndContext>
+        {/* The disclaimer normally rides in AppFooter; embedded, it stays as a
+            quiet line so it is never dropped (it has to show everywhere). */}
+        {embedded && (
+          <div style={embeddedDisclaimerRowStyle}>
+            <Disclaimer variant="line" />
+          </div>
+        )}
       </div>
-      <AppFooter />
+      {!embedded && <AppFooter />}
     </>
   );
 }
