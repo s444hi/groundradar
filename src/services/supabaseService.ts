@@ -86,7 +86,10 @@ export async function saveFieldAnalysisToSupabase(
     }
   }
 
-  // 3. Insert complete NASA + Survey + Rotation Strategies record into `field_analyses`
+  const { soil, climate_summary, satellite_layers } = analysis.nasa_environment;
+  const { field_profile } = analysis;
+
+  // 3. Insert complete structured NASA + USDA + Gemini Vision + Strategies dataset into `field_analyses`
   const { data: analysisRow, error: analysisError } = await supabase
     .from('field_analyses')
     .insert({
@@ -100,6 +103,33 @@ export async function saveFieldAnalysisToSupabase(
       field_profile: analysis.field_profile,
       strategies: analysis.strategies,
       check_locally: analysis.check_locally,
+      // Structured dataset columns for direct SQL queries & analytics
+      soil_source: soil.source_label,
+      soil_texture: soil.texture_class,
+      sand_pct: soil.sand_pct,
+      silt_pct: soil.silt_pct,
+      clay_pct: soil.clay_pct,
+      organic_carbon_g_kg: soil.organic_carbon_g_kg,
+      drainage_class: soil.drainage_class,
+      hydrologic_group: soil.hydrologic_group,
+      available_water_capacity: soil.available_water_capacity,
+      elevation_m: field_profile.elevation_m,
+      slope_percent: field_profile.slope_percent,
+      drainage_runoff_risk: field_profile.drainage_runoff_risk,
+      annual_rainfall_mm: climate_summary.annual_rainfall_mm,
+      annual_et_mm: climate_summary.annual_et_mm,
+      mean_temp_c: climate_summary.mean_temp_c,
+      mean_surface_moisture: climate_summary.mean_surface_moisture,
+      mean_soil_moisture: climate_summary.mean_soil_moisture,
+      mean_solar_mj_m2: climate_summary.mean_solar_mj_m2,
+      last_spring_frost_week: climate_summary.last_spring_frost_week,
+      first_fall_frost_week: climate_summary.first_fall_frost_week,
+      frost_free_weeks: climate_summary.frost_free_weeks,
+      modis_ndvi_snapshot_url: satellite_layers.modis_ndvi_snapshot_url,
+      gpm_imerg_snapshot_url: satellite_layers.gpm_imerg_snapshot_url,
+      ground_truth_diagnosis: field_profile.ground_truth_diagnosis,
+      vision_ai_verified: field_profile.vision_ai_verified,
+      selected_strategy_id: analysis.strategies[0]?.id ?? null,
     })
     .select('id')
     .single();
@@ -114,4 +144,38 @@ export async function saveFieldAnalysisToSupabase(
     photoUrls: uploadedUrls,
     persistedToCloud: true,
   };
+}
+
+export async function recordSelectedSimulationStrategy(
+  analysisId: string,
+  selectedStrategyId: string
+): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('field_analyses')
+    .update({
+      selected_strategy_id: selectedStrategyId,
+      simulation_entered_at: new Date().toISOString(),
+    })
+    .eq('id', analysisId);
+
+  if (error) {
+    console.warn('Could not update selected simulation strategy:', error.message);
+  }
+}
+
+export async function logFieldChatTurn(
+  analysisId: string,
+  userMessage: string,
+  assistantReply: string
+): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('field_chat_logs').insert([
+    { analysis_id: analysisId, role: 'user', message: userMessage },
+    { analysis_id: analysisId, role: 'assistant', message: assistantReply },
+  ]);
+
+  if (error) {
+    console.warn('Could not log chat message:', error.message);
+  }
 }

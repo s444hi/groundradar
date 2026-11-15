@@ -39,17 +39,17 @@ export function App() {
     setErrorMessage(null);
 
     try {
-      setStatusMessage('Fetching NASA POWER climatology, SoilGrids, and SRTM elevation...');
+      setStatusMessage('Checking NASA satellite weather, soil moisture, and local soil maps...');
       const nasaEnv = await fetchNasaFieldEnvironment(
         tracedField.latitude,
         tracedField.longitude,
         tracedField.geoJson
       );
 
-      setStatusMessage('Synthesizing ground-truth photos and generating 3 rotation strategies...');
+      setStatusMessage('Reviewing your field photos and building 3 custom crop rotation plans...');
       const analysis = await generateRotationAnalysis(tracedField, surveyData, nasaEnv);
 
-      setStatusMessage('Saving field polygon, photos, and NASA analysis to Supabase...');
+      setStatusMessage('Saving your field plan to your account...');
       const saved = await saveFieldAnalysisToSupabase(tracedField, analysis);
 
       setAnalysisResult(analysis);
@@ -57,7 +57,7 @@ export function App() {
     } catch (err) {
       console.error(err);
       setErrorMessage(
-        err instanceof Error ? err.message : 'Unexpected error connecting to NASA or Supabase.'
+        err instanceof Error ? err.message : 'Something went wrong while analyzing your field.'
       );
     } finally {
       setIsAnalyzing(false);
@@ -82,6 +82,7 @@ export function App() {
         color: 'var(--color-text)',
       }}
     >
+      {/* Top Brand Header */}
       <header
         style={{
           maxWidth: '1200px',
@@ -105,7 +106,7 @@ export function App() {
             Ground Radar
           </h1>
           <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
-            NASA Earth Observation & Local Soil Decision Support
+            NASA Satellite Insights & Personalized Crop Rotation Planning
           </p>
         </div>
 
@@ -120,14 +121,14 @@ export function App() {
           }}
         >
           {simulationPayload
-            ? '3. Simulation Engine'
+            ? 'Step 3 of 3 • Interactive Simulation'
             : analysisResult
-            ? '2. NASA Agronomic Report'
-            : '1. Field Boundary & Survey'}
+            ? 'Step 2 of 3 • Your Field Report'
+            : 'Step 1 of 3 • Trace Your Field'}
         </span>
       </header>
 
-      {/* View 3: Simulation Handoff Screen (ready to mount teammate's simulation component) */}
+      {/* View 3: Simulation Handoff Screen (Ready to mount teammate's simulation component) */}
       {simulationPayload ? (
         <div
           style={{
@@ -137,9 +138,12 @@ export function App() {
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-card)',
             padding: '28px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
             <div>
               <span
                 style={{
@@ -151,10 +155,10 @@ export function App() {
                   borderRadius: 'var(--radius-pill)',
                 }}
               >
-                SIMULATION READY • {simulationPayload.selected_strategy.name.toUpperCase()}
+                SIMULATION LOADED • {simulationPayload.selected_strategy.name.toUpperCase()}
               </span>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 400, margin: '8px 0 0 0' }}>
-                Teammate Simulation Handoff Payload
+                2-Year Field Simulation Ready
               </h2>
             </div>
 
@@ -166,41 +170,65 @@ export function App() {
                 borderRadius: 'var(--radius-pill)',
                 border: '1px solid var(--color-border)',
                 backgroundColor: 'var(--color-bg-subtle)',
+                fontSize: '13px',
                 cursor: 'pointer',
               }}
             >
-              Back to Results
+              ← Back to Crop Plans
             </button>
           </div>
 
-          <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
-            This payload passes the selected 2-year crop rotation, 52-week NASA POWER climate series, and ISRIC soil
-            properties directly into your teammate&apos;s simulation engine:
+          <p style={{ fontSize: '14px', color: 'var(--color-text)', margin: 0, lineHeight: 1.55 }}>
+            Your <strong>{simulationPayload.area_acres}-acre</strong> {simulationPayload.soil.texture_class.toLowerCase()} plot and 52 weeks of NASA weather data are loaded into the{' '}
+            <strong>{simulationPayload.selected_strategy.name}</strong> schedule. Your teammate&apos;s simulation engine mounts directly in this panel.
           </p>
 
-          <pre
+          <div
             style={{
-              backgroundColor: 'var(--color-bg-subtle)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '12px',
+              backgroundColor: 'var(--color-cream)',
               padding: '16px',
-              borderRadius: '12px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '12px',
-              overflowX: 'auto',
-              maxHeight: '320px',
+              borderRadius: '16px',
             }}
           >
-            {JSON.stringify(
-              {
-                ...simulationPayload,
-                weekly_series: `[52 weeks of NASA POWER T2M_MIN, T2M_MAX, PRECTOTCORR, GWETROOT]`,
-              },
-              null,
-              2
-            )}
-          </pre>
+            <div>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                SELECTED PLAN
+              </span>
+              <div style={{ fontWeight: 500, fontSize: '14px', marginTop: '4px' }}>
+                {simulationPayload.selected_strategy.name}
+              </div>
+            </div>
+            <div>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                SOIL & DRAINAGE
+              </span>
+              <div style={{ fontWeight: 500, fontSize: '14px', marginTop: '4px' }}>
+                {simulationPayload.soil.texture_class} ({simulationPayload.soil.drainage_class})
+              </div>
+            </div>
+            <div>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                PROJECTED WATER SAVINGS
+              </span>
+              <div style={{ fontWeight: 500, fontSize: '14px', marginTop: '4px', color: 'var(--color-olive)' }}>
+                ~{simulationPayload.selected_strategy.expected_benefits.water_savings_pct}% less irrigation needed
+              </div>
+            </div>
+            <div>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                SOIL HEALTH BOOST
+              </span>
+              <div style={{ fontWeight: 500, fontSize: '14px', marginTop: '4px', color: 'var(--color-olive)' }}>
+                +{simulationPayload.selected_strategy.expected_benefits.soil_organic_gain_pct}% richer topsoil
+              </div>
+            </div>
+          </div>
         </div>
       ) : analysisResult && savedRecord ? (
-        /* View 2: Full NASA Results Page + Agronomist Chat + Enter Simulation */
+        /* View 2: Full User-Friendly Results Page + Agronomist Chat + Enter Simulation */
         <ResultsPage
           analysis={analysisResult}
           savedRecord={savedRecord}
@@ -231,8 +259,8 @@ export function App() {
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-card)',
                 padding: '20px 24px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
+                fontFamily: 'var(--font-sans)',
+                fontSize: '14px',
                 color: 'var(--color-olive)',
               }}
             >
@@ -253,7 +281,7 @@ export function App() {
                 fontSize: '14px',
               }}
             >
-              <strong>Connection Error:</strong> {errorMessage}
+              <strong>Heads up:</strong> {errorMessage}
             </div>
           )}
         </>

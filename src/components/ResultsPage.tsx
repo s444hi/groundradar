@@ -13,13 +13,20 @@ import {
   CheckCircle2,
   AlertTriangle,
   Camera,
+  Satellite,
+  Sparkles,
 } from 'lucide-react';
 import cropsData from '../simulation/data/crops.json';
-import type {
-  GroundRadarAnalysisResult,
-  RotationStrategy,
+import {
+  askFieldAgronomistLive,
+  type GroundRadarAnalysisResult,
+  type RotationStrategy,
 } from '../services/rotationGeneratorService';
-import type { SavedAnalysisRecord } from '../services/supabaseService';
+import {
+  logFieldChatTurn,
+  recordSelectedSimulationStrategy,
+  type SavedAnalysisRecord,
+} from '../services/supabaseService';
 
 export interface SimulationHandoffPayload {
   analysisId: string;
@@ -46,6 +53,19 @@ interface ChatMessage {
   text: string;
 }
 
+// Helper: Convert week number (1-52) into an easy-to-read Month + Week label
+function formatWeekToReadableDate(week: number): string {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  const clamped = Math.min(52, Math.max(1, week));
+  const monthIndex = Math.min(11, Math.floor(((clamped - 1) / 52) * 12));
+  const weekOfMonth = ((clamped - 1) % 4) + 1;
+  const suffix = weekOfMonth === 1 ? 'Early' : weekOfMonth === 2 ? 'Mid' : 'Late';
+  return `${suffix} ${months[monthIndex]}`;
+}
+
 export const ResultsPage: React.FC<ResultsPageProps> = ({
   analysis,
   savedRecord,
@@ -64,66 +84,88 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
   const formatCropNames = (ids: string[]) =>
     ids.map((id) => cropsMap[id]?.display_name || id).join(' + ');
 
-  // Context-aware Agronomist Chat state
+  const { soil, climate_summary } = analysis.nasa_environment;
+  const { field_profile } = analysis;
+
+  // Plain-English interpretations of NASA & USDA metrics
+  const moisturePct = Math.round(climate_summary.mean_soil_moisture * 100);
+  const moistureLabel =
+    moisturePct >= 60
+      ? 'Naturally Moist Soil'
+      : moisturePct >= 40
+      ? 'Balanced Soil Moisture'
+      : 'Dry-Prone Soil';
+  const moistureAdvice =
+    moisturePct >= 60
+      ? 'Your ground holds water well—avoid over-watering and watch for soggy roots.'
+      : moisturePct >= 40
+      ? 'Good natural water balance. Mulch and cover crops will keep summer moisture steady.'
+      : 'Your plot dries out quickly. Drip irrigation and moisture-trapping cover crops are key.';
+
+  const soilAdvice =
+    soil.organic_matter_level === 'high'
+      ? `Rich organic matter (${soil.drainage_class.toLowerCase()})—great nutrient-holding capacity.`
+      : soil.organic_matter_level === 'medium'
+      ? `${soil.drainage_class} with moderate organic matter. Cover crops will boost fertility.`
+      : `${soil.drainage_class}, but low in organic matter—compost and legumes will rebuild topsoil.`;
+
+  const springFrostText = formatWeekToReadableDate(climate_summary.last_spring_frost_week);
+  const fallFrostText = formatWeekToReadableDate(climate_summary.first_fall_frost_week);
+
+  const slopeHeadline =
+    field_profile.slope_percent >= 5
+      ? 'Noticeable Hillside'
+      : field_profile.slope_percent >= 2
+      ? 'Gentle Slope'
+      : 'Flat Ground';
+  const slopeAdvice =
+    field_profile.drainage_runoff_risk === 'high'
+      ? 'Higher rainwater runoff risk—keep roots anchored year-round to prevent topsoil wash.'
+      : field_profile.drainage_runoff_risk === 'medium'
+      ? 'Moderate drainage speed—winter cover crops will help rainwater soak in evenly.'
+      : 'Minimal erosion risk—rainwater stays where it falls across your plot.';
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      text: `I analyzed your ${analysis.field_profile.area_acres}-acre ${analysis.field_profile.mode} at ${analysis.field_profile.latitude}°, ${analysis.field_profile.longitude}° using NASA POWER, SoilGrids (${analysis.field_profile.soil_texture}), and SRTM elevation (${analysis.field_profile.slope_percent}% slope). Ask me anything about planting dates, cover crops, irrigation, or why "${selectedStrategy?.name}" ranked #1 for your priorities.`,
+      text: `Welcome! I reviewed your ${field_profile.area_acres}-acre ${field_profile.mode} using NASA satellites and local soil surveys. You have ${soil.texture_class.toLowerCase()} soil with a frost-free growing season from ${springFrostText} to ${fallFrostText}. Ask me anything in plain language about what to plant, when to seed, or how to care for your soil!`,
     },
   ]);
   const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
-  const generateAgronomistReply = (question: string): string => {
-    const q = question.toLowerCase();
-    const { climate_summary, soil } = analysis.nasa_environment;
-    const { field_profile } = analysis;
+  const handleAskQuestion = async (questionText: string) => {
+    const trimmed = questionText.trim();
+    if (!trimmed || isChatLoading) return;
 
-    if (q.includes('frost') || q.includes('when') || q.includes('plant') || q.includes('date')) {
-      return `Based on NASA POWER climatology for ${field_profile.latitude}°, ${field_profile.longitude}°, your last spring frost occurs around Week ${climate_summary.last_spring_frost_week} and your first fall frost arrives around Week ${climate_summary.first_fall_frost_week} (${climate_summary.frost_free_weeks} frost-free weeks). Plant warm-season crops 1–2 weeks after Week ${climate_summary.last_spring_frost_week}, and seed cool-season cover crops 6–8 weeks before Week ${climate_summary.first_fall_frost_week}.`;
-    }
-
-    if (q.includes('water') || q.includes('irrigat') || q.includes('moisture') || q.includes('drought')) {
-      const pct = Math.round(climate_summary.mean_soil_moisture * 100);
-      return `NASA POWER root-zone wetness averages ${pct}% with ${climate_summary.annual_rainfall_mm} mm of annual precipitation across ${soil.texture_class} soil (${soil.sand_pct}% sand / ${soil.clay_pct}% clay). "${selectedStrategy.name}" saves ~${selectedStrategy.expected_benefits.water_savings_pct}% water by keeping living mulch/cover roots active between cash harvests.`;
-    }
-
-    if (q.includes('soil') || q.includes('nitrogen') || q.includes('fertilizer') || q.includes('carbon')) {
-      return `ISRIC SoilGrids reports ${soil.texture_class} with ${soil.organic_carbon_g_kg} g/kg Soil Organic Carbon (${soil.organic_matter_level} organic matter). Incorporating nitrogen-fixing legumes and overwintering cover in "${selectedStrategy.name}" is projected to boost soil organic matter by +${selectedStrategy.expected_benefits.soil_organic_gain_pct}% over a 2-year cycle.`;
-    }
-
-    if (q.includes('pest') || q.includes('disease') || q.includes('family')) {
-      return `"${selectedStrategy.name}" reduces soil-borne pest and pathogen pressure by ~${selectedStrategy.expected_benefits.pest_risk_reduction_pct}% by separating botanical families across warm and cool seasons so host-specific nematodes and fungal spores cannot overwinter on continuous roots.`;
-    }
-
-    return `For your ${field_profile.soil_texture} plot (${field_profile.slope_percent}% slope, ${field_profile.drainage_runoff_risk} runoff risk), "${selectedStrategy.name}" balances your priority weights with a ${selectedStrategy.expected_benefits.estimated_yield_index}/100 yield index. Click "Enter Simulation" to test week-by-week moisture, nitrogen, and frost stress across Year 1 and Year 2!`;
-  };
-
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = chatInput.trim();
-    if (!trimmed) return;
-
-    const reply = generateAgronomistReply(trimmed);
-    setMessages((prev) => [
-      ...prev,
-      { role: 'user', text: trimmed },
-      { role: 'assistant', text: reply },
-    ]);
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setChatInput('');
+    setIsChatLoading(true);
+
+    const reply = await askFieldAgronomistLive(trimmed, analysis, selectedStrategy);
+    setMessages((prev) => [...prev, { role: 'assistant', text: reply }]);
+    setIsChatLoading(false);
+
+    if (savedRecord.persistedToCloud) {
+      void logFieldChatTurn(savedRecord.analysisId, trimmed, reply);
+    }
   };
 
   const handleLaunchSimulation = () => {
     if (!selectedStrategy) return;
+    if (savedRecord.persistedToCloud) {
+      void recordSelectedSimulationStrategy(savedRecord.analysisId, selectedStrategy.id);
+    }
     onEnterSimulation({
       analysisId: savedRecord.analysisId,
       fieldId: savedRecord.fieldId,
-      mode: analysis.field_profile.mode,
-      area_acres: analysis.field_profile.area_acres,
+      mode: field_profile.mode,
+      area_acres: field_profile.area_acres,
       coordinates: analysis.nasa_environment.coordinates,
       selected_strategy: selectedStrategy,
       past_rotation: analysis.survey.past_rotation,
-      soil: analysis.nasa_environment.soil,
-      climate_summary: analysis.nasa_environment.climate_summary,
+      soil,
+      climate_summary,
       weekly_series: analysis.nasa_environment.weekly_series,
     });
   };
@@ -163,11 +205,11 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             }}
           >
             <ArrowLeft size={15} />
-            New Field
+            Trace Another Field
           </button>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -178,8 +220,8 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                   borderRadius: 'var(--radius-pill)',
                 }}
               >
-                {analysis.field_profile.area_acres} ACRES •{' '}
-                {analysis.field_profile.mode.toUpperCase()}
+                {field_profile.area_acres} ACRES •{' '}
+                {field_profile.mode === 'farm' ? 'COMMERCIAL FARM' : 'HOME / COMMUNITY GARDEN'}
               </span>
               {savedRecord.persistedToCloud && (
                 <span
@@ -192,7 +234,21 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                     color: 'var(--color-sim-good)',
                   }}
                 >
-                  <CheckCircle2 size={13} /> Saved to Supabase
+                  <CheckCircle2 size={13} /> Saved to Your Account
+                </span>
+              )}
+              {field_profile.vision_ai_verified && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    color: 'var(--color-olive)',
+                  }}
+                >
+                  <Sparkles size={13} /> Field Photos Analyzed
                 </span>
               )}
             </div>
@@ -204,12 +260,11 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                 margin: '4px 0 0 0',
               }}
             >
-              NASA Satellite & Soil Agronomic Report
+              Your Personalized Field Health & Crop Plan
             </h2>
           </div>
         </div>
 
-        {/* Primary CTA: Enter Simulation */}
         <button
           type="button"
           onClick={handleLaunchSimulation}
@@ -233,11 +288,11 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
         </button>
       </div>
 
-      {/* Section 1: 4 Live NASA & SoilGrids Telemetry Cards */}
+      {/* Section 1: 4 Plain-English Field Condition Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
           gap: '16px',
         }}
       >
@@ -248,92 +303,121 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-card)',
             padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '10px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '8px' }}>
-            <Sprout size={18} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>ISRIC SOILGRIDS 250M</span>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '6px' }}>
+              <Sprout size={18} />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>YOUR SOIL TYPE</span>
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', marginBottom: '6px' }}>
+              {soil.texture_class} Soil
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0, lineHeight: 1.45 }}>
+              {soilAdvice}
+            </p>
           </div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', marginBottom: '4px' }}>
-            {analysis.nasa_environment.soil.texture_class}
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
+            Mix: {soil.sand_pct}% Sand • {soil.silt_pct}% Silt • {soil.clay_pct}% Clay
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
-            {analysis.nasa_environment.soil.sand_pct}% Sand • {analysis.nasa_environment.soil.silt_pct}% Silt •{' '}
-            {analysis.nasa_environment.soil.clay_pct}% Clay ({analysis.nasa_environment.soil.organic_carbon_g_kg} g/kg SOC)
-          </p>
         </div>
 
-        {/* Soil Moisture Card */}
+        {/* Moisture Card */}
         <div
           style={{
             backgroundColor: 'var(--color-bg)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-card)',
             padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '10px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '8px' }}>
-            <Droplets size={18} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>NASA ROOT-ZONE MOISTURE</span>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '6px' }}>
+              <Droplets size={18} />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>WATER & MOISTURE</span>
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', marginBottom: '6px' }}>
+              {moistureLabel}
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0, lineHeight: 1.45 }}>
+              {moistureAdvice}
+            </p>
           </div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', marginBottom: '4px' }}>
-            {Math.round(analysis.nasa_environment.climate_summary.mean_soil_moisture * 100)}% Wetness
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
+            NASA SMAP Root-Zone Wetness: {moisturePct}%
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
-            Mean annual root-zone fractional water content (GWETROOT)
-          </p>
         </div>
 
-        {/* Climate & Frost Card */}
+        {/* Growing Season Card */}
         <div
           style={{
             backgroundColor: 'var(--color-bg)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-card)',
             padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '10px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '8px' }}>
-            <CloudRain size={18} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>NASA POWER CLIMATE</span>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '6px' }}>
+              <CloudRain size={18} />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>GROWING SEASON</span>
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', marginBottom: '6px' }}>
+              {climate_summary.frost_free_weeks} Frost-Free Weeks
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0, lineHeight: 1.45 }}>
+              Safe outdoor planting runs from <strong>{springFrostText}</strong> until <strong>{fallFrostText}</strong>.
+            </p>
           </div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', marginBottom: '4px' }}>
-            {analysis.nasa_environment.climate_summary.annual_rainfall_mm} mm/yr
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
+            Avg Rain: {climate_summary.annual_rainfall_mm} mm/yr • Avg Temp: {climate_summary.mean_temp_c}°C
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
-            {analysis.nasa_environment.climate_summary.frost_free_weeks} frost-free weeks (Wk{' '}
-            {analysis.nasa_environment.climate_summary.last_spring_frost_week}–Wk{' '}
-            {analysis.nasa_environment.climate_summary.first_fall_frost_week})
-          </p>
         </div>
 
-        {/* Terrain & Runoff Card */}
+        {/* Slope & Drainage Card */}
         <div
           style={{
             backgroundColor: 'var(--color-bg)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-card)',
             padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '10px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '8px' }}>
-            <Mountain size={18} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>NASA SRTM 30M TERRAIN</span>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-olive)', marginBottom: '6px' }}>
+              <Mountain size={18} />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>SLOPE & RUNOFF</span>
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', marginBottom: '6px' }}>
+              {slopeHeadline} ({field_profile.slope_percent}%)
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0, lineHeight: 1.45 }}>
+              {slopeAdvice}
+            </p>
           </div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', marginBottom: '4px' }}>
-            {analysis.field_profile.slope_percent}% Slope
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
+            Elevation: {field_profile.elevation_m}m • Runoff Risk: {field_profile.drainage_runoff_risk.toUpperCase()}
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
-            {analysis.field_profile.elevation_m}m elevation •{' '}
-            <strong style={{ textTransform: 'capitalize' }}>
-              {analysis.field_profile.drainage_runoff_risk}
-            </strong>{' '}
-            runoff risk
-          </p>
         </div>
       </div>
 
-      {/* Section 2: Ground-Truth Photos & Local Verification Banner */}
+      {/* Section 2: What We Observed From Your Photos & Satellites */}
       <div
         style={{
           backgroundColor: 'var(--color-cream)',
@@ -345,40 +429,72 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           gap: '14px',
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '12px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ flex: 1, minWidth: '280px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Camera size={16} style={{ color: 'var(--color-olive)' }} />
-              <strong style={{ fontSize: '14px', color: 'var(--color-olive)' }}>
-                Ground-Truth Synthesis ({savedRecord.photoUrls.length} Field Photos)
+              <strong style={{ fontSize: '15px', color: 'var(--color-olive)' }}>
+                What We Found From Your {savedRecord.photoUrls.length} Field Photos + NASA Satellites
               </strong>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0, lineHeight: 1.5 }}>
-              {analysis.field_profile.ground_truth_diagnosis}
+            <p style={{ fontSize: '14px', color: 'var(--color-text)', margin: 0, lineHeight: 1.55 }}>
+              {field_profile.ground_truth_diagnosis}
             </p>
           </div>
 
-          {savedRecord.photoUrls.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {savedRecord.photoUrls.map((url, i) => (
-                <img
-                  key={i}
-                  src={url}
-                  alt={`Field angle ${i + 1}`}
-                  style={{
-                    width: '64px',
-                    height: '52px',
-                    objectFit: 'cover',
-                    borderRadius: '10px',
-                    border: '1px solid var(--color-border)',
-                  }}
-                />
-              ))}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {savedRecord.photoUrls.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt={`Field angle ${i + 1}`}
+                style={{
+                  width: '68px',
+                  height: '56px',
+                  objectFit: 'cover',
+                  borderRadius: '10px',
+                  border: '1px solid var(--color-border)',
+                }}
+              />
+            ))}
+
+            <div
+              style={{
+                position: 'relative',
+                width: '96px',
+                height: '56px',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                border: '1px solid var(--color-olive)',
+                backgroundColor: '#1f291e',
+              }}
+              title="NASA MODIS Satellite Vegetation Health View"
+            >
+              <img
+                src={analysis.nasa_environment.satellite_layers.modis_ndvi_snapshot_url}
+                alt="NASA Satellite Vegetation View"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  bottom: '2px',
+                  left: '4px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  color: '#fff',
+                  backgroundColor: 'rgba(0,0,0,0.65)',
+                  padding: '1px 4px',
+                  borderRadius: '4px',
+                }}
+              >
+                NASA VIEW
+              </span>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Check Locally Callouts */}
+        {/* Simple Tips to Double-Check in Person */}
         <div
           style={{
             borderTop: '1px solid var(--color-border)',
@@ -399,28 +515,39 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               fontWeight: 600,
             }}
           >
-            <AlertTriangle size={13} /> CHECK LOCALLY ON YOUR PLOT:
+            <AlertTriangle size={13} /> QUICK THINGS TO DOUBLE-CHECK IN PERSON:
           </span>
           {analysis.check_locally.map((tip, idx) => (
-            <p key={idx} style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
+            <p key={idx} style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0 }}>
               • {tip}
             </p>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+            <Satellite size={13} style={{ color: 'var(--color-olive)' }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+              Powered by NASA POWER, SMAP, SRTM, MODIS & {soil.source_label}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Section 3: 3 Ranked Crop Rotation Strategies */}
       <div>
-        <h3
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '26px',
-            fontWeight: 400,
-            margin: '0 0 14px 0',
-          }}
-        >
-          Recommended 2-Year Crop Rotation Strategies
-        </h3>
+        <div style={{ marginBottom: '14px' }}>
+          <h3
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: '26px',
+              fontWeight: 400,
+              margin: '0 0 4px 0',
+            }}
+          >
+            Your Top 3 Crop Rotation Plans (2-Year Schedule)
+          </h3>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', margin: 0 }}>
+            Click any plan below to select it, then press <strong>Enter Simulation</strong> to watch how your soil and harvest perform season by season.
+          </p>
+        </div>
 
         <div
           style={{
@@ -468,7 +595,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                         borderRadius: 'var(--radius-pill)',
                       }}
                     >
-                      #{index + 1} • {strategy.badge}
+                      {index === 0 ? '★ BEST MATCH' : `OPTION #${index + 1}`} • {strategy.badge}
                     </span>
 
                     {isSelected && (
@@ -496,11 +623,11 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                     {strategy.name}
                   </h4>
 
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '0 0 14px 0', lineHeight: 1.45 }}>
+                  <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '0 0 14px 0', lineHeight: 1.5 }}>
                     {strategy.summary}
                   </p>
 
-                  {/* Metrics Pills */}
+                  {/* Plain-English Benefit Highlights */}
                   <div
                     style={{
                       display: 'grid',
@@ -515,23 +642,23 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Droplets size={14} style={{ color: 'var(--color-olive)' }} />
-                      <span>-{strategy.expected_benefits.water_savings_pct}% Water</span>
+                      <span>Saves ~{strategy.expected_benefits.water_savings_pct}% water</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Sprout size={14} style={{ color: 'var(--color-olive)' }} />
-                      <span>+{strategy.expected_benefits.soil_organic_gain_pct}% Soil Carbon</span>
+                      <span>+{strategy.expected_benefits.soil_organic_gain_pct}% richer soil</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <ShieldCheck size={14} style={{ color: 'var(--color-olive)' }} />
-                      <span>-{strategy.expected_benefits.pest_risk_reduction_pct}% Pest Risk</span>
+                      <span>-{strategy.expected_benefits.pest_risk_reduction_pct}% pest pressure</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <TrendingUp size={14} style={{ color: 'var(--color-olive)' }} />
-                      <span>{strategy.expected_benefits.estimated_yield_index}/100 Yield</span>
+                      <span>{strategy.expected_benefits.estimated_yield_index}% harvest score</span>
                     </div>
                   </div>
 
-                  {/* 4-Season Schedule */}
+                  {/* Season-by-Season Planting Timeline */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {strategy.schedule.map((slot, idx) => (
                       <div
@@ -540,14 +667,14 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          fontSize: '12px',
-                          padding: '6px 10px',
+                          fontSize: '13px',
+                          padding: '7px 12px',
                           borderRadius: '8px',
                           backgroundColor: idx % 2 === 0 ? 'var(--color-cream)' : 'var(--color-bg-subtle)',
                         }}
                       >
-                        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
-                          Yr {slot.year} • {slot.season === 'warm_season' ? 'Warm' : 'Cool'}
+                        <span style={{ color: 'var(--color-text-muted)' }}>
+                          Year {slot.year} ({slot.season === 'warm_season' ? 'Spring / Summer' : 'Fall / Winter'})
                         </span>
                         <strong style={{ color: 'var(--color-text)' }}>
                           {formatCropNames(slot.crops)}
@@ -567,7 +694,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                     lineHeight: 1.45,
                   }}
                 >
-                  {strategy.agronomist_rationale}
+                  <strong>Why this works for you:</strong> {strategy.agronomist_rationale}
                 </p>
               </div>
             );
@@ -575,7 +702,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
         </div>
       </div>
 
-      {/* Section 4: Context-Aware AI Agronomist Chat-Box */}
+      {/* Section 4: Friendly AI Field Agronomist Chat-Box */}
       <div
         style={{
           backgroundColor: 'var(--color-bg)',
@@ -584,7 +711,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           padding: '24px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
           <MessageSquare size={18} style={{ color: 'var(--color-olive)' }} />
           <h3
             style={{
@@ -594,28 +721,23 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               margin: 0,
             }}
           >
-            Ask Your Field Agronomist
+            Have Questions? Ask Your Field Agronomist
           </h3>
         </div>
+        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '0 0 12px 0' }}>
+          Get plain-language answers tailored to your exact soil, local weather, and uploaded field photos.
+        </p>
 
-        {/* Quick Question Chips */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
           {[
-            'When is my safe planting window after frost?',
-            'How does this rotation save water on my soil?',
-            'How does it improve nitrogen & soil organic matter?',
+            'When should I plant my first seeds this spring?',
+            'How often will I need to water with this plan?',
+            'What did you notice in my field photos?',
           ].map((preset) => (
             <button
               key={preset}
               type="button"
-              onClick={() => {
-                const reply = generateAgronomistReply(preset);
-                setMessages((prev) => [
-                  ...prev,
-                  { role: 'user', text: preset },
-                  { role: 'assistant', text: reply },
-                ]);
-              }}
+              onClick={() => handleAskQuestion(preset)}
               style={{
                 padding: '6px 12px',
                 borderRadius: 'var(--radius-pill)',
@@ -631,7 +753,6 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           ))}
         </div>
 
-        {/* Chat History */}
         <div
           style={{
             display: 'flex',
@@ -657,21 +778,31 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                 padding: '10px 14px',
                 borderRadius: '14px',
                 fontSize: '13px',
-                lineHeight: 1.45,
+                lineHeight: 1.5,
               }}
             >
               {m.text}
             </div>
           ))}
+          {isChatLoading && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-olive)' }}>
+              Checking your field data...
+            </div>
+          )}
         </div>
 
-        {/* Input Box */}
-        <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '10px' }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAskQuestion(chatInput);
+          }}
+          style={{ display: 'flex', gap: '10px' }}
+        >
           <input
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Ask about frost dates, soil pH/texture, cover crops, or irrigation..."
+            placeholder="Ask anything—e.g., 'Can I plant tomatoes earlier?' or 'How do cover crops help?'"
             style={{
               flex: 1,
               padding: '10px 16px',
@@ -684,6 +815,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           />
           <button
             type="submit"
+            disabled={isChatLoading}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
