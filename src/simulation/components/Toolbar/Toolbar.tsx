@@ -1,4 +1,8 @@
+export type SimulationTab = "rotation" | "plant";
+
 export interface ToolbarProps {
+  activeTab: SimulationTab;
+  onSelectTab: (tab: SimulationTab) => void;
   prioritiesOpen: boolean;
   onTogglePriorities: () => void;
   onFindBetterOrder: () => void;
@@ -34,7 +38,7 @@ const activeTabStyle: React.CSSProperties = {
   cursor: "default",
 };
 
-const disabledTabStyle: React.CSSProperties = {
+const inactiveTabStyle: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
   fontWeight: 500,
   fontSize: "14px",
@@ -43,11 +47,7 @@ const disabledTabStyle: React.CSSProperties = {
   padding: "8px 18px",
   background: "transparent",
   color: "var(--color-text-muted)",
-  opacity: 0.55,
-  cursor: "not-allowed",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
+  cursor: "pointer",
 };
 
 const actionsStyle: React.CSSProperties = {
@@ -87,30 +87,22 @@ const filledPillStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const soonChipStyle: React.CSSProperties = {
-  fontFamily: "var(--font-mono)",
-  fontSize: "9px",
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  background: "var(--color-pale-green)",
-  color: "var(--color-olive)",
-  borderRadius: "var(--radius-pill)",
-  padding: "2px 6px",
+const filledPillDisabledStyle: React.CSSProperties = {
+  ...filledPillStyle,
+  opacity: 0.45,
+  cursor: "not-allowed",
 };
 
-/**
- * Only "Rotation", "Priorities", and "Find a better order" are live today.
- * Plant mode is a real `disabled` button (correct semantics) with an
- * always-visible "Soon" chip, so it reads as clearly not-yet-wired rather
- * than looking broken.
- */
-export default function Toolbar({ prioritiesOpen, onTogglePriorities, onFindBetterOrder }: ToolbarProps) {
+/** Rotation, Plant, Priorities, and Find a better order are all live. Find a better order only makes sense for Rotation mode, so it's disabled (not hidden) on the Plant tab. */
+export default function Toolbar({ activeTab, onSelectTab, prioritiesOpen, onTogglePriorities, onFindBetterOrder }: ToolbarProps) {
   return (
     <div style={toolbarStyle}>
       <div style={modeTabsStyle}>
-        <button style={activeTabStyle}>Rotation</button>
-        <button style={disabledTabStyle} disabled title="Coming soon">
-          Plant <span style={soonChipStyle}>Soon</span>
+        <button style={activeTab === "rotation" ? activeTabStyle : inactiveTabStyle} onClick={() => onSelectTab("rotation")}>
+          Rotation
+        </button>
+        <button style={activeTab === "plant" ? activeTabStyle : inactiveTabStyle} onClick={() => onSelectTab("plant")}>
+          Plant
         </button>
       </div>
       <div style={actionsStyle}>
@@ -121,7 +113,12 @@ export default function Toolbar({ prioritiesOpen, onTogglePriorities, onFindBett
         >
           Priorities
         </button>
-        <button style={filledPillStyle} onClick={onFindBetterOrder}>
+        <button
+          style={activeTab === "rotation" ? filledPillStyle : filledPillDisabledStyle}
+          onClick={onFindBetterOrder}
+          disabled={activeTab !== "rotation"}
+          title={activeTab === "rotation" ? undefined : "Switch to Rotation mode to use this"}
+        >
           Find a better order
         </button>
       </div>

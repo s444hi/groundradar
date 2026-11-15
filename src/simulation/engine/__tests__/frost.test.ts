@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import demoField from "../../fixtures/demo-field.json";
-import { getFrostWeek, getFrostWeeks } from "../frost";
+import { getFrostWeek, getFrostWeeks, weekToMonthDay } from "../frost";
 import type { FrostDates } from "../types";
 
 const frostDates = demoField.climate_data.frost_dates as unknown as FrostDates;
@@ -39,5 +39,12 @@ describe("getFrostWeeks", () => {
       last_spring_frost: 11,
       first_fall_frost: 46,
     });
+  });
+});
+
+describe("weekToMonthDay", () => {
+  it("includes an approximate day-of-month, not just the month", () => {
+    expect(weekToMonthDay(1)).toBe("Jan 4");
+    expect(weekToMonthDay(13)).toBe("Mar 29");
   });
 });

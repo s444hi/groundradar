@@ -25,12 +25,24 @@ export function getFrostWeeks(frostDates: FrostDates): FrostWeeks {
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** Converts a 1-52 calendar week into its containing month's short name, using the week's approximate midpoint day-of-year against the same cumulative-days table getFrostWeek uses in reverse. */
-export function weekToMonthName(calendarWeek: number): string {
-  const dayOfYear = Math.min(365, Math.max(1, (calendarWeek - 1) * 7 + 4));
+function monthIndexForDayOfYear(dayOfYear: number): number {
   let monthIndex = 0;
   for (let i = 0; i < 12; i++) {
     if (dayOfYear > CUMULATIVE_DAYS_BEFORE_MONTH[i]) monthIndex = i;
   }
-  return MONTH_NAMES[monthIndex];
+  return monthIndex;
+}
+
+/** Converts a 1-52 calendar week into its containing month's short name, using the week's approximate midpoint day-of-year against the same cumulative-days table getFrostWeek uses in reverse. */
+export function weekToMonthName(calendarWeek: number): string {
+  const dayOfYear = Math.min(365, Math.max(1, (calendarWeek - 1) * 7 + 4));
+  return MONTH_NAMES[monthIndexForDayOfYear(dayOfYear)];
+}
+
+/** Like weekToMonthName, but with an approximate day-of-month too (e.g. "Apr 2"), for UI chips that want a more specific-feeling date than just a month. */
+export function weekToMonthDay(calendarWeek: number): string {
+  const dayOfYear = Math.min(365, Math.max(1, (calendarWeek - 1) * 7 + 4));
+  const monthIndex = monthIndexForDayOfYear(dayOfYear);
+  const dayOfMonth = dayOfYear - CUMULATIVE_DAYS_BEFORE_MONTH[monthIndex];
+  return `${MONTH_NAMES[monthIndex]} ${dayOfMonth}`;
 }
