@@ -207,6 +207,7 @@ describe("fromAnalysis qualitative analysis", () => {
     expect(strategy.qualitative_analysis.why_suggested).toBe(source.summary);
     expect(strategy.qualitative_analysis.nasa_evidence).toBe(source.agronomist_rationale);
     expect(strategy.qualitative_analysis.benefits).toEqual([source.badge]);
+    expect(strategy.qualitative_analysis.information_gaps).toEqual(demoAnalysis.check_locally);
     expect(strategy.qualitative_analysis.local_risks_for_review).toEqual(demoAnalysis.check_locally);
   });
 
@@ -218,13 +219,6 @@ describe("fromAnalysis qualitative analysis", () => {
       `${demoAnalysis.nasa_environment.climate_summary.annual_rainfall_mm} mm`,
     );
     expect(qualitative_analysis.local_risks_for_review).toEqual(demoAnalysis.check_locally);
-  });
-
-  it("leaves information_gaps empty so the local checks only show on the Check locally tab", () => {
-    for (const strategy of convert().rotation_strategies) {
-      expect(strategy.qualitative_analysis.information_gaps).toEqual([]);
-      expect(strategy.qualitative_analysis.local_risks_for_review).toEqual(demoAnalysis.check_locally);
-    }
   });
 });
 

@@ -384,7 +384,7 @@ export default function SimulationPage({
         {embedded && onBackToResults && (
           <p style={backLinkRowStyle}>
             <button style={backLinkStyle} onClick={onBackToResults}>
-              ← Back to results
+              ← Back to crop plans
             </button>
           </p>
         )}

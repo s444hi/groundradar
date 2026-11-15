@@ -242,10 +242,7 @@ function yourPlanAnalysis(analysis: AnalysisResult): QualitativeAnalysis {
       mean_soil_moisture * 100,
     )}% average root-zone wetness.`,
     benefits: ["Your own plan, left exactly as you entered it"],
-    // check_locally seeds local_risks_for_review, which the engine turns
-    // into its own check_locally flags. Repeating it as information_gaps
-    // would print the same list again on the Overview tab.
-    information_gaps: [],
+    information_gaps: analysis.check_locally,
     local_risks_for_review: analysis.check_locally,
   };
 }
@@ -255,7 +252,7 @@ function strategyAnalysis(strategy: AnalysisStrategy, checkLocally: string[]): Q
     why_suggested: strategy.summary,
     nasa_evidence: strategy.agronomist_rationale,
     benefits: [strategy.badge],
-    information_gaps: [],
+    information_gaps: checkLocally,
     local_risks_for_review: checkLocally,
   };
 }
