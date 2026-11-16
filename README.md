@@ -133,3 +133,6 @@ The entry point is `runSimulation(fieldJson)` in [`src/simulation/engine/index.t
 
 - **Saahithya Venkatraghavan**: the rotation simulation and its engine (`src/simulation/`)
 - **Anannya Gairola**: sign-in, field tracing, the survey, the NASA and soil data pipeline, the Results page and the Field Agronomist chat
+
+## ACCESS DEPLOYED WEB-APP : https://groundradar-5lh7-dpai8aecf-tiyags-projects.vercel.app
+
